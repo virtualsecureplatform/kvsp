@@ -8,9 +8,21 @@ Caveat: this project is under construction.
 ## Usage
 
 ```
-$ kvsp compile foo.c -o foo
-$ kvsp encrypt foo cloud.enc secret.key
-$ kvsp run cloud.enc result.enc
-$ kvsp decrypt secret.key result.enc result.data
+## Compile C code (`foo.c`) to an executable file (`foo`).
+$ kvsp cc foo.c -o foo
+
+## Generate a secret key (`secret.key`).
+$ kvsp genkey -out secret.key
+
+## Encrypt `foo` with `secret.key` to get an encrypted executable file (`foo.enc`).
+$ kvsp enc -inkey secret.key -in foo -out foo.enc
+
+## Run `foo.enc` to get an encrypted result (`result.enc`).
+$ kvsp run -in foo.enc -out result.enc
+
+## Decrypt `result.enc` with `secret.key` to get its plaintext form (`result.data`).
+$ kvsp dec -inkey secret.key -in result.enc -out result.data
+
+## Show the result.
 $ cat result.data
 ```
