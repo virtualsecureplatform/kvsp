@@ -17,8 +17,8 @@ $ kvsp genkey -out secret.key
 ## Encrypt `foo` with `secret.key` to get an encrypted executable file (`foo.enc`).
 $ kvsp enc -inkey secret.key -in foo -out foo.enc
 
-## Run `foo.enc` to get an encrypted result (`result.enc`).
-$ kvsp run -in foo.enc -out result.enc
+## Run `foo.enc` for 50 clocks to get an encrypted result (`result.enc`).
+$ kvsp run -in foo.enc -out result.enc -clock 50
 
 ## Decrypt `result.enc` with `secret.key` to get its plaintext form (`result.data`).
 $ kvsp dec -inkey secret.key -in result.enc -out result.data
