@@ -62,6 +62,16 @@ void doGenkey(const std::string& output_filepath)
     dump_key(key, output_filepath);
 }
 
+void doCloudkey(const std::string& input_filepath,
+                const std::string& output_filepath)
+{
+    auto secret_key = import_secret_key(input_filepath);
+
+    std::ofstream ofs{output_filepath, std::ios_base::binary};
+    assert(ofs && "Invalid filepath, maybe you don't have right permission?");
+    export_tfheGateBootstrappingCloudKeySet_toStream(ofs, &secret_key->cloud);
+}
+
 void doEnc(const std::string& key_filepath, const std::string& input_filepath,
            const std::string& output_filepath)
 {
@@ -112,6 +122,7 @@ int main(int argc, char** argv)
 {
     /*
        tfheutil genkey KEY-FILE
+       tfheutil cloudkey INPUT-KEY-FILE OUTPUT-FILE
        tfheutil enc KEY-FILE INPUT-FILE OUTPUT-FILE
        tfheutil dec KEY-FILE INPUT-FILE OUTPUT-FILE
     */
@@ -122,6 +133,10 @@ int main(int argc, char** argv)
     if (subcommand == "genkey") {
         assert(argc == 3 && "Invalid command-line arguments");
         doGenkey(argv[2]);
+    }
+    else if (subcommand == "cloudkey") {
+        assert(argc == 4 && "Invalid command-line arguments");
+        doCloudkey(argv[2], argv[3]);
     }
     else if (subcommand == "enc") {
         assert(argc == 5 && "Invalid command-line arguments");
