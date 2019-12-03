@@ -1,0 +1,3 @@
+[submodule "cahp-sim"]
+	path = cahp-sim
+	url = https://github.com/virtualsecureplatform/cahp-sim.git
