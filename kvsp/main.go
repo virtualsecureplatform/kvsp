@@ -184,22 +184,6 @@ type KVSPReqPacket struct {
 	RAM      []byte
 }
 
-// NewKVSPReqPacket is ctor of KVSPReqPacket
-func NewKVSPReqPacket(cloudKey []byte, rom []byte, ram []byte) *KVSPReqPacket {
-	return &KVSPReqPacket{
-		KVSPReqPacketHeader{
-			[4]byte{'K', 'V', 'S', 'P'},
-			0,
-			uint64(len(cloudKey)),
-			uint64(len(rom)),
-			uint64(len(ram)),
-		},
-		cloudKey,
-		rom,
-		ram,
-	}
-}
-
 // WriteTo will dump the content to writer
 // FIXME: The first return value is dummy
 func (packet *KVSPReqPacket) WriteTo(writer io.Writer) (int64, error) {
@@ -514,12 +498,26 @@ func doEnc() error {
 		return err
 	}
 
-	// WriteTo the encrypted images with their cloud key
+	// Create a KVSP request packet to write in
+	packet := KVSPReqPacket{
+		KVSPReqPacketHeader{
+			[4]byte{'K', 'V', 'S', 'P'},
+			0,
+			uint64(len(cloudKey)),
+			uint64(len(romEnc)),
+			uint64(len(ramEnc)),
+		},
+		cloudKey,
+		romEnc,
+		ramEnc,
+	}
+
+	// Write the packet to the output
 	writer, err := os.Create(*outputFileName)
 	if err != nil {
 		return err
 	}
-	_, err = NewKVSPReqPacket(cloudKey, romEnc, ramEnc).WriteTo(writer)
+	_, err = packet.WriteTo(writer)
 	if err != nil {
 		return err
 	}
@@ -576,7 +574,21 @@ func doRun() error {
 		regs[i] = inputPacket.RAM[0 : len(inputPacket.RAM)/512*2]
 	}
 
-	outputPacket := NewKVSPResPacket(flags, regs, inputPacket.RAM)
+	outputPacket := KVSPResPacket{
+		KVSPResPacketHeader{
+			[4]byte{'K', 'V', 'S', 'P'},
+			0,
+			uint16(len(flags)),
+			uint16(len(regs)),
+			uint64(len(flags) * len(flags[0])), // FIXME: Assume all slices inside have the same length
+			uint64(len(regs) * len(regs[0])),   // FIXME: Assume all slices inside have the same length
+			uint64(len(inputPacket.RAM)),
+		},
+		flags,
+		regs,
+		inputPacket.RAM,
+	}
+
 	writer, err := os.Create(*outputFileName)
 	if err != nil {
 		return err
