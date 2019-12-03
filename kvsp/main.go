@@ -3,6 +3,7 @@ package main
 import (
 	"debug/elf"
 	"encoding/binary"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -377,11 +378,12 @@ func doCC() error {
 func doDec() error {
 	// Parse command-line arguments.
 	fs := flag.NewFlagSet("dec", flag.ExitOnError)
+	shouldOutputJSON := fs.Bool("json", false, "Print results as JSON")
 	keyFileName := fs.String("k", "", "Key file name")
 	inputFileName := fs.String("i", "", "Input file name (encrypted)")
 	fs.Parse(os.Args[2:])
 	if *keyFileName == "" || *inputFileName == "" {
-		return errors.New("Specify -k, -i, and -o options properly")
+		return errors.New("Specify -k and -i options properly")
 	}
 
 	// Do decryption.
@@ -421,22 +423,39 @@ func doDec() error {
 		return err
 	}
 
-	// Print the result
-	for i, flag := range flags {
-		fmt.Printf("Flag %d : %t\n", i, flag)
-	}
-	fmt.Printf("\n")
-	for i, reg := range regs {
-		fmt.Printf("Reg %d : %d\n", i, reg)
-	}
-	fmt.Printf("\nRAM :\n")
-	for i, b := range ram {
-		fmt.Printf("%02x ", b)
-		if i%16 == 15 {
-			fmt.Printf("\n")
+	// Print the result as JSON
+	if *shouldOutputJSON {
+		ramReadable := make([]int, len(ram))
+		for i, b := range ram {
+			ramReadable[i] = int(b)
 		}
+		json, err := json.Marshal(struct {
+			Flags []bool
+			Regs  []uint16
+			RAM   []int
+		}{flags, regs, ramReadable})
+		if err != nil {
+			return err
+		}
+		os.Stdout.Write(json)
+	} else {
+		// Print the result
+		for i, flag := range flags {
+			fmt.Printf("Flag %d : %t\n", i, flag)
+		}
+		fmt.Printf("\n")
+		for i, reg := range regs {
+			fmt.Printf("Reg %d : %d\n", i, reg)
+		}
+		fmt.Printf("\nRAM :\n")
+		for i, b := range ram {
+			fmt.Printf("%02x ", b)
+			if i%16 == 15 {
+				fmt.Printf("\n")
+			}
+		}
+		fmt.Printf("\n")
 	}
-	fmt.Printf("\n")
 
 	return nil
 }
