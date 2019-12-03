@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 )
 
 func fatalExit(err error) {
@@ -104,6 +105,42 @@ func getCloudKey(keyFileName string) ([]byte, error) {
 	return ioutil.ReadAll(cloudKeyTmpFile)
 }
 
+func encryptBit(keyFileName string, bit bool) ([]byte, error) {
+	// Get the path of tfheutil
+	tfheutilPath, err := getPathOf("tfheutil")
+	if err != nil {
+		return nil, err
+	}
+
+	// Write the source binary to a temporary file
+	plainTmpFile, err := ioutil.TempFile("", "")
+	if err != nil {
+		return nil, err
+	}
+	defer os.Remove(plainTmpFile.Name())
+	if bit {
+		plainTmpFile.Write([]byte{1})
+	} else {
+		plainTmpFile.Write([]byte{0})
+	}
+	plainTmpFile.Close()
+
+	// Encrypt the binary
+	encTmpFile, err := ioutil.TempFile("", "")
+	if err != nil {
+		return nil, err
+	}
+	defer os.Remove(encTmpFile.Name())
+	err = execCmd(
+		tfheutilPath,
+		[]string{"enc", keyFileName, plainTmpFile.Name(), encTmpFile.Name(), strconv.Itoa(1)})
+	if err != nil {
+		return nil, err
+	}
+
+	return ioutil.ReadAll(encTmpFile)
+}
+
 func encryptBytes(keyFileName string, plain []byte) ([]byte, error) {
 	// Get the path of tfheutil
 	tfheutilPath, err := getPathOf("tfheutil")
@@ -128,12 +165,53 @@ func encryptBytes(keyFileName string, plain []byte) ([]byte, error) {
 	defer os.Remove(encTmpFile.Name())
 	err = execCmd(
 		tfheutilPath,
-		[]string{"enc", keyFileName, plainTmpFile.Name(), encTmpFile.Name()})
+		[]string{"enc", keyFileName, plainTmpFile.Name(), encTmpFile.Name(), strconv.Itoa(-1)})
 	if err != nil {
 		return nil, err
 	}
 
 	return ioutil.ReadAll(encTmpFile)
+}
+
+func decryptBit(keyFileName string, enc []byte) (bool, error) {
+	// Get the path of tfheutil
+	tfheutilPath, err := getPathOf("tfheutil")
+	if err != nil {
+		return false, err
+	}
+
+	// Write the source binary to a temporary file
+	encTmpFile, err := ioutil.TempFile("", "")
+	if err != nil {
+		return false, err
+	}
+	defer os.Remove(encTmpFile.Name())
+	encTmpFile.Write(enc)
+	encTmpFile.Close()
+
+	// Decrypt the binary
+	decTmpFile, err := ioutil.TempFile("", "")
+	if err != nil {
+		return false, err
+	}
+	defer os.Remove(decTmpFile.Name())
+	err = execCmd(
+		tfheutilPath,
+		[]string{"dec", keyFileName, encTmpFile.Name(), decTmpFile.Name(), strconv.Itoa(1)})
+	if err != nil {
+		return false, err
+	}
+
+	// Read the result
+	plain, err := ioutil.ReadAll(decTmpFile)
+	if err != nil {
+		return false, err
+	}
+	if len(plain) != 1 {
+		return false, errors.New("Invalid result of tfheutil")
+	}
+
+	return (plain[0] & 1) != 0, nil
 }
 
 func decryptBytes(keyFileName string, enc []byte) ([]byte, error) {
@@ -160,7 +238,7 @@ func decryptBytes(keyFileName string, enc []byte) ([]byte, error) {
 	defer os.Remove(decTmpFile.Name())
 	err = execCmd(
 		tfheutilPath,
-		[]string{"dec", keyFileName, encTmpFile.Name(), decTmpFile.Name()})
+		[]string{"dec", keyFileName, encTmpFile.Name(), decTmpFile.Name(), strconv.Itoa(-1)})
 	if err != nil {
 		return nil, err
 	}
@@ -405,11 +483,10 @@ func doDec() error {
 	// Decrypt flags
 	flags := make([]bool, packet.Nflags)
 	for i, encFlag := range packet.Flags {
-		plainFlag, err := decryptBytes(*keyFileName, encFlag)
+		flags[i], err = decryptBit(*keyFileName, encFlag)
 		if err != nil {
 			return err
 		}
-		flags[i] = plainFlag[0] != 0
 	}
 
 	// Decrypt regs
