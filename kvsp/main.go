@@ -55,6 +55,8 @@ func getPathOf(name string) (string, error) {
 		path = "../llvm-cahp/build/bin/clang"
 	case "tfheutil":
 		path = "../tfheutil/tfheutil"
+	case "cahp-sim":
+		path = "../cahp-sim/cahp-sim"
 	default:
 		return "", errors.New("Invalid name")
 	}
@@ -453,6 +455,17 @@ func doCC() error {
 	return execCmd(path, append(os.Args[2:], "-target cahp"))
 }
 
+func doEmu() error {
+	// Get the path of cahp-sim
+	path, err := getPathOf("cahp-sim")
+	if err != nil {
+		fatalExit(err)
+	}
+
+	// Run
+	return execCmd(path, os.Args[2:])
+}
+
 func doDec() error {
 	// Parse command-line arguments.
 	fs := flag.NewFlagSet("dec", flag.ExitOnError)
@@ -742,6 +755,8 @@ func main() {
 		err = doGenkey()
 	case "run":
 		err = doRun()
+	case "emu":
+		err = doEmu()
 	default:
 		printUsageAndExit()
 	}
