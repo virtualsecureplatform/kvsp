@@ -378,10 +378,15 @@ func doCC() error {
 func doDec() error {
 	// Parse command-line arguments.
 	fs := flag.NewFlagSet("dec", flag.ExitOnError)
-	shouldOutputJSON := fs.Bool("json", false, "Print results as JSON")
-	keyFileName := fs.String("k", "", "Key file name")
-	inputFileName := fs.String("i", "", "Input file name (encrypted)")
-	fs.Parse(os.Args[2:])
+	var (
+		shouldOutputJSON = fs.Bool("json", false, "Print results as JSON")
+		keyFileName      = fs.String("k", "", "Key file name")
+		inputFileName    = fs.String("i", "", "Input file name (encrypted)")
+	)
+	err := fs.Parse(os.Args[2:])
+	if err != nil {
+		return err
+	}
 	if *keyFileName == "" || *inputFileName == "" {
 		return errors.New("Specify -k and -i options properly")
 	}
@@ -463,10 +468,15 @@ func doDec() error {
 func doEnc() error {
 	// Parse command-line arguments.
 	fs := flag.NewFlagSet("enc", flag.ExitOnError)
-	keyFileName := fs.String("k", "", "Key file name")
-	inputFileName := fs.String("i", "", "Input file name (plain)")
-	outputFileName := fs.String("o", "", "Output file name (encrypted)")
-	fs.Parse(os.Args[2:])
+	var (
+		keyFileName    = fs.String("k", "", "Key file name")
+		inputFileName  = fs.String("i", "", "Input file name (plain)")
+		outputFileName = fs.String("o", "", "Output file name (encrypted)")
+	)
+	err := fs.Parse(os.Args[2:])
+	if err != nil {
+		return err
+	}
 	if *keyFileName == "" || *inputFileName == "" || *outputFileName == "" {
 		return errors.New("Specify -k, -i, and -o options properly")
 	}
@@ -547,8 +557,13 @@ func doEnc() error {
 func doGenkey() error {
 	// Parse command-line arguments.
 	fs := flag.NewFlagSet("genkey", flag.ExitOnError)
-	outputFileName := fs.String("o", "", "Output file name")
-	fs.Parse(os.Args[2:])
+	var (
+		outputFileName = fs.String("o", "", "Output file name")
+	)
+	err := fs.Parse(os.Args[2:])
+	if err != nil {
+		return err
+	}
 	if *outputFileName == "" {
 		return errors.New("Specify -o options properly")
 	}
@@ -566,10 +581,15 @@ func doGenkey() error {
 func doRun() error {
 	// Parse command-line arguments.
 	fs := flag.NewFlagSet("run", flag.ExitOnError)
-	nClocks := fs.Uint("c", 0, "Number of clocks to run")
-	inputFileName := fs.String("i", "", "Input file name (encrypted)")
-	outputFileName := fs.String("o", "", "Output file name (encrypted)")
-	fs.Parse(os.Args[2:])
+	var (
+		nClocks        = fs.Uint("c", 0, "Number of clocks to run")
+		inputFileName  = fs.String("i", "", "Input file name (encrypted)")
+		outputFileName = fs.String("o", "", "Output file name (encrypted)")
+	)
+	err := fs.Parse(os.Args[2:])
+	if err != nil {
+		return err
+	}
 	if *nClocks == 0 || *inputFileName == "" || *outputFileName == "" {
 		return errors.New("Specify -c, -i, and -o options properly")
 	}
