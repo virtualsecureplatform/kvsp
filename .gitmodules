@@ -4,3 +4,6 @@
 [submodule "llvm-cahp"]
 	path = llvm-cahp
 	url = https://github.com/virtualsecureplatform/llvm-cahp.git
+[submodule "tfhe"]
+	path = tfhe
+	url = https://github.com/virtualsecureplatform/vsp-tfhe
