@@ -7,3 +7,6 @@
 [submodule "tfhe"]
 	path = tfhe
 	url = https://github.com/virtualsecureplatform/vsp-tfhe
+[submodule "cahp-rt"]
+	path = cahp-rt
+	url = https://github.com/virtualsecureplatform/cahp-rt.git
