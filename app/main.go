@@ -52,11 +52,13 @@ func getPathOf(name string) (string, error) {
 
 	switch name {
 	case "clang":
-		path = "../llvm-cahp/build/bin/clang"
+		path = "../llvm-cahp/bin/clang"
 	case "tfheutil":
 		path = "../tfheutil/tfheutil"
 	case "cahp-sim":
 		path = "../cahp-sim/cahp-sim"
+	case "cahp-rt":
+		path = "../cahp-rt"
 	default:
 		return "", errors.New("Invalid name")
 	}
@@ -451,8 +453,14 @@ func doCC() error {
 		fatalExit(err)
 	}
 
+	// Get the path of cahp-rt
+	cahpRtPath, err := getPathOf("cahp-rt")
+	if err != nil {
+		fatalExit(err)
+	}
+
 	// Run
-	return execCmd(path, append(os.Args[2:], "-target cahp"))
+	return execCmd(path, append(os.Args[2:], "-target", "cahp", "--sysroot", cahpRtPath))
 }
 
 func doEmu() error {

@@ -1,4 +1,4 @@
-all: build/kvsp build/app build/cahp-sim build/tfheutil build/llvm-cahp
+all: build/kvsp build/app build/cahp-sim build/tfheutil build/llvm-cahp build/cahp-rt
 
 build/kvsp: FORCE
 	mkdir -p build/
@@ -21,15 +21,22 @@ build/tfheutil: build/lib/tfhe FORCE
 	cp tfheutil/tfheutil build/tfheutil/tfheutil
 
 build/llvm-cahp: FORCE
-	mkdir -p build/llvm-cahp
-	cd build/llvm-cahp && \
+	mkdir llvm-cahp/build
+	cd llvm-cahp/build && \
 		cmake -G Ninja \
 			-DLLVM_ENABLE_PROJECTS="lld;clang" \
 			-DCMAKE_BUILD_TYPE="Release" \
 			-DLLVM_TARGETS_TO_BUILD="" \
 			-DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD="CAHP" \
-			../../llvm-cahp/llvm && \
+			../llvm && \
 		cmake --build .
+	mkdir -p build/llvm-cahp/build
+	cp -r llvm-cahp/build/bin build/llvm-cahp/
+
+build/cahp-rt: build/llvm-cahp FORCE
+	CC=../build/llvm-cahp/bin/clang make -C cahp-rt
+	mkdir -p build/cahp-rt
+	cp cahp-rt/crt0.o cahp-rt/libc.a cahp-rt/cahp.lds build/cahp-rt/
 
 build/lib/tfhe: FORCE
 	mkdir -p tfhe/build
