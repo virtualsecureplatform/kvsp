@@ -40,10 +40,13 @@ int main()
 ## Compile the C code (`fib.c`) to an executable file (`fib`).
 $ ./kvsp cc fib.c -o fib
 
-## Let's check if the program is correct by emulator.
+## Let's check if the program is correct by emulator, which runs
+## it without encryption.
 $ ./kvsp emu -q fib
+x0=5	x1=510	x2=0	x3=0	x4=0	x5=0	x6=0	x7=0	x8=5	x9=3	x10=0	x11=0	x12=0	x13=0	x14=0	x15=0	pc=5
 
 ## We can see `a8=5` here, so it seems to work correctly.
+## Now we try to run the same program with encryption.
 
 ## Generate a secret key (`secret.key`).
 $ ./kvsp genkey -o secret.key
