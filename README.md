@@ -33,7 +33,7 @@ int fib(int n)
 
 int main()
 {
-    // The result will be set in the register a8.
+    // The result will be set in the register x8.
     return fib(5);
 }
 
@@ -45,8 +45,8 @@ $ ./kvsp cc fib.c -o fib
 $ ./kvsp emu -q fib
 x0=5	x1=510	x2=0	x3=0	x4=0	x5=0	x6=0	x7=0	x8=5	x9=3	x10=0	x11=0	x12=0	x13=0	x14=0	x15=0	pc=5
 
-## We can see `a8=5` here, so it seems to work correctly.
-## Now we try to run the same program with encryption.
+## We can see `x8=5` here, so it seems to work correctly.
+## Now we will run the same program with encryption.
 
 ## Generate a secret key (`secret.key`).
 $ ./kvsp genkey -o secret.key
