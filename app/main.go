@@ -460,7 +460,7 @@ func doCC() error {
 	}
 
 	// Run
-	return execCmd(path, append(os.Args[2:], "-target", "cahp", "--sysroot", cahpRtPath))
+	return execCmd(path, append(os.Args[2:], "-target", "cahp", "-Oz", "--sysroot", cahpRtPath))
 }
 
 func doEmu() error {
