@@ -21,9 +21,9 @@ build/tfheutil: build/lib/tfhe FORCE
 	cp tfheutil/tfheutil build/tfheutil/tfheutil
 
 build/llvm-cahp: FORCE
-	mkdir llvm-cahp/build
+	mkdir -p llvm-cahp/build
 	cd llvm-cahp/build && \
-		cmake -G Ninja \
+		cmake \
 			-DLLVM_ENABLE_PROJECTS="lld;clang" \
 			-DCMAKE_BUILD_TYPE="Release" \
 			-DLLVM_TARGETS_TO_BUILD="" \
@@ -40,7 +40,7 @@ build/cahp-rt: build/llvm-cahp FORCE
 
 build/lib/tfhe: FORCE
 	mkdir -p tfhe/build
-	cd tfhe/build && cmake ../src -DCMAKE_INSTALL_PREFIX=$(PWD)/tfhe/build && make && make install
+	cd tfhe/build && cmake ../src -DCMAKE_INSTALL_PREFIX=$(CURDIR)/tfhe/build && make && make install
 	mkdir -p build/lib
 	cp tfhe/build/libtfhe/*.so build/lib/
 
