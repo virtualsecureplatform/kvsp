@@ -52,13 +52,13 @@ func getPathOf(name string) (string, error) {
 
 	switch name {
 	case "clang":
-		path = "../llvm-cahp/bin/clang"
+		path = "clang"
 	case "tfheutil":
-		path = "../tfheutil/tfheutil"
+		path = "tfheutil"
 	case "cahp-sim":
-		path = "../cahp-sim/cahp-sim"
+		path = "cahp-sim"
 	case "cahp-rt":
-		path = "../cahp-rt"
+		path = "../cahp-sysroot"
 	default:
 		return "", errors.New("Invalid name")
 	}

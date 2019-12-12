@@ -1,48 +1,47 @@
-all: build/kvsp build/app build/cahp-sim build/tfheutil build/llvm-cahp build/cahp-rt
+SHELL=/bin/bash
+NCORES=$(shell grep cpu.cores /proc/cpuinfo | sort -u | sed 's/[^0-9]//g')
+
+all: build/kvsp build/app build/tools build/llvm-cahp build/cahp-rt
 
 build/kvsp: FORCE
-	mkdir -p build/
-	cp kvsp build/
+	mkdir -p build/bin
+	cp kvsp build/bin/
 
 build/app: FORCE
 	mkdir -p build/app
-	cd app && go build
-	cp app/app build/app/app
+	cd app && go build -o ../build/app/app
+	cp build/app/app build/bin/
 
-build/cahp-sim: FORCE
-	mkdir -p build/cahp-sim
-	make -C cahp-sim
-	cp cahp-sim/cahp-sim build/cahp-sim/cahp-sim
-
-build/tfheutil: build/lib/tfhe FORCE
-	mkdir -p build/tfheutil
-	cd tfheutil
-	make -C tfheutil
-	cp tfheutil/tfheutil build/tfheutil/tfheutil
+build/tools: FORCE
+	mkdir -p build/tools
+	cd build/tools && \
+		cmake \
+			-DCMAKE_BUILD_TYPE="Release" \
+			-DENABLE_FFTW=off \
+			-DENABLE_NAYUKI_PORTABLE=off -DENABLE_NAYUKI_AVX=off \
+			-DENABLE_SPQLIOS_AVX=on -DENABLE_SPQLIOS_FMA=off \
+			../.. && \
+		make -j $$(( $(NCORES) + 1 ))
+	cp build/tools/bin/* build/bin/
 
 build/llvm-cahp: FORCE
-	mkdir -p llvm-cahp/build
-	cd llvm-cahp/build && \
+	mkdir -p build/llvm-cahp
+	cd build/llvm-cahp && \
 		cmake \
-			-DLLVM_ENABLE_PROJECTS="lld;clang" \
 			-DCMAKE_BUILD_TYPE="Release" \
+			-DLLVM_ENABLE_PROJECTS="lld;clang" \
 			-DLLVM_TARGETS_TO_BUILD="" \
 			-DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD="CAHP" \
-			../llvm && \
-		cmake --build .
-	mkdir -p build/llvm-cahp/build
-	cp -r llvm-cahp/build/bin build/llvm-cahp/
+			../../llvm-cahp/llvm && \
+		make -j $$(( $(NCORES) + 1 ))
+	cp build/llvm-cahp/bin/* build/bin/
 
 build/cahp-rt: build/llvm-cahp FORCE
-	CC=../build/llvm-cahp/bin/clang make -C cahp-rt
-	mkdir -p build/cahp-rt
-	cp cahp-rt/crt0.o cahp-rt/libc.a cahp-rt/cahp.lds build/cahp-rt/
-
-build/lib/tfhe: FORCE
-	mkdir -p tfhe/build
-	cd tfhe/build && cmake ../src -DCMAKE_INSTALL_PREFIX=$(CURDIR)/tfhe/build && make && make install
-	mkdir -p build/lib
-	cp tfhe/build/libtfhe/*.so build/lib/
+	cp -r cahp-rt build/cahp-rt
+	cd build/cahp-rt && CC=../llvm-cahp/bin/clang make
+	mkdir -p build/cahp-sysroot
+	cd build/cahp-rt && \
+		cp crt0.o libc.a cahp.lds ../cahp-sysroot/
 
 FORCE:
 
