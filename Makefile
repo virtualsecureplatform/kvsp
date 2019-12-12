@@ -1,16 +1,15 @@
 SHELL=/bin/bash
 NCORES=$(shell grep cpu.cores /proc/cpuinfo | sort -u | sed 's/[^0-9]//g')
 
-all: build/kvsp build/app build/tools build/llvm-cahp build/cahp-rt
+all: prepare build/kvsp build/tools build/llvm-cahp build/cahp-rt
+
+prepare: FORCE
+	mkdir -p build/bin
 
 build/kvsp: FORCE
-	mkdir -p build/bin
-	cp kvsp build/bin/
-
-build/app: FORCE
-	mkdir -p build/app
-	cd app && go build -o ../build/app/app
-	cp build/app/app build/bin/
+	mkdir -p build/kvsp
+	cd kvsp && go build -o ../build/kvsp/kvsp
+	cp build/kvsp/kvsp build/bin/
 
 build/tools: FORCE
 	mkdir -p build/tools
@@ -45,4 +44,4 @@ build/cahp-rt: build/llvm-cahp FORCE
 
 FORCE:
 
-.PHONY: FORCE
+.PHONY: FORCE prepare

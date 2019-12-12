@@ -1,5 +1,0 @@
-#!/bin/bash
-
-# Thanks to: https://stackoverflow.com/questions/59895/get-the-source-directory-of-a-bash-script-from-within-the-script-itself/246128#246128
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$DIR/lib:$DIR/tfhe/build/lib $DIR/app/app "$@"
