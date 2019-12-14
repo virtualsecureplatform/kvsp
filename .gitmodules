@@ -10,3 +10,6 @@
 [submodule "cahp-rt"]
 	path = cahp-rt
 	url = https://github.com/virtualsecureplatform/cahp-rt.git
+[submodule "Iyokan-L2"]
+	path = Iyokan-L2
+	url = https://github.com/virtualsecureplatform/Iyokan-L2.git
