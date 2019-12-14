@@ -464,13 +464,13 @@ func doCC() error {
 	// Get the path of clang
 	path, err := getPathOf("CLANG")
 	if err != nil {
-		fatalExit(err)
+		return err
 	}
 
 	// Get the path of cahp-rt
 	cahpRtPath, err := getPathOf("CAHP_RT")
 	if err != nil {
-		fatalExit(err)
+		return err
 	}
 
 	// Run
