@@ -16,3 +16,6 @@
 [submodule "Iyokan-L1"]
 	path = Iyokan-L1
 	url = https://github.com/virtualsecureplatform/Iyokan-L1.git
+[submodule "cahp-diamond"]
+	path = cahp-diamond
+	url = https://github.com/virtualsecureplatform/cahp-diamond.git
