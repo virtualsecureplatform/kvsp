@@ -13,3 +13,6 @@
 [submodule "Iyokan-L2"]
 	path = Iyokan-L2
 	url = https://github.com/virtualsecureplatform/Iyokan-L2.git
+[submodule "Iyokan-L1"]
+	path = Iyokan-L1
+	url = https://github.com/virtualsecureplatform/Iyokan-L1.git
