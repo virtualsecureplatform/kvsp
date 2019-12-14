@@ -5,6 +5,7 @@ all: prepare build/kvsp build/tools build/llvm-cahp build/cahp-rt
 
 prepare: FORCE
 	mkdir -p build/bin
+	mkdir -p build/share/kvsp
 
 build/kvsp: FORCE
 	mkdir -p build/kvsp
@@ -38,9 +39,9 @@ build/llvm-cahp: FORCE
 build/cahp-rt: build/llvm-cahp FORCE
 	cp -r cahp-rt build/cahp-rt
 	cd build/cahp-rt && CC=../llvm-cahp/bin/clang make
-	mkdir -p build/cahp-sysroot
+	mkdir -p build/share/kvsp/cahp-rt
 	cd build/cahp-rt && \
-		cp crt0.o libc.a cahp.lds ../cahp-sysroot/
+		cp crt0.o libc.a cahp.lds ../share/kvsp/cahp-rt/
 
 FORCE:
 
