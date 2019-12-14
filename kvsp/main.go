@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 )
 
@@ -67,6 +68,10 @@ func getPathOf(name string) (string, error) {
 			path = "cahp-sim"
 		case "CAHP_RT":
 			path = "../share/kvsp/cahp-rt"
+		case "IYOKANL2":
+			path = "iyokanl2"
+		case "VSPCORE":
+			path = "../share/kvsp/vsp-core-converted.json"
 		default:
 			return "", errors.New("Invalid name")
 		}
@@ -701,47 +706,29 @@ func doRun() error {
 		return errors.New("Specify -c, -i, and -o options properly")
 	}
 
+	// Get the path of iyokanl2.
+	iyokanl2Path, err := getPathOf("IYOKANL2")
+	if err != nil {
+		return err
+	}
+
+	// Get the path of VSP core.
+	vspcorePath, err := getPathOf("VSPCORE")
+	if err != nil {
+		return err
+	}
+
+	// Set #CPUs plus 1 as #threads of iyokanl2.
+	nThreads := runtime.NumCPU() + 1
+
 	// Run the encrypted program as is.
-	// FIXME: That's just a stub
-	reader, err := os.Open(*inputFileName)
-	if err != nil {
-		return err
-	}
-	inputPacket := KVSPReqPacket{}
-	_, err = inputPacket.ReadFrom(reader)
-	if err != nil {
-		return err
-	}
-
-	flags := make([][]byte, 1)
-	flags[0] = inputPacket.RAM[0 : len(inputPacket.RAM)/512/8]
-	regs := make([][]byte, 16)
-	for i := 0; i < 16; i++ {
-		regs[i] = inputPacket.RAM[0 : len(inputPacket.RAM)/512*2]
-	}
-
-	outputPacket := KVSPResPacket{
-		KVSPResPacketHeader{
-			[4]byte{'K', 'V', 'S', 'P'},
-			0,
-			uint16(len(flags)),
-			uint16(len(regs)),
-			uint64(len(flags) * len(flags[0])), // FIXME: Assume all slices inside have the same length
-			uint64(len(regs) * len(regs[0])),   // FIXME: Assume all slices inside have the same length
-			uint64(len(inputPacket.RAM)),
-		},
-		flags,
-		regs,
-		inputPacket.RAM,
-	}
-
-	writer, err := os.Create(*outputFileName)
-	if err != nil {
-		return err
-	}
-	outputPacket.WriteTo(writer)
-
-	return nil
+	return execCmd(iyokanl2Path, []string{
+		"-c", fmt.Sprint(*nClocks),
+		"-t", fmt.Sprint(nThreads),
+		"-l", vspcorePath,
+		"-i", *inputFileName,
+		"-o", *outputFileName,
+	})
 }
 
 func printUsageAndExit() {
