@@ -50,17 +50,26 @@ func getPathOf(name string) (string, error) {
 	path := ""
 	relative := true
 
-	switch name {
-	case "clang":
-		path = "clang"
-	case "tfheutil":
-		path = "tfheutil"
-	case "cahp-sim":
-		path = "cahp-sim"
-	case "cahp-rt":
-		path = "../cahp-sysroot"
-	default:
-		return "", errors.New("Invalid name")
+	// Check if environment variable is set in KVSP_XXX.
+	if path = os.Getenv(fmt.Sprintf("KVSP_%s_PATH", name)); path != "" {
+		relative = false
+	} else {
+		/*
+			Do heuristic approach, which assumes binaries are in the current
+			(this executable's) directory, and others are in ../share/kvsp.
+		*/
+		switch name {
+		case "CLANG":
+			path = "clang"
+		case "TFHEUTIL":
+			path = "tfheutil"
+		case "CAHP_SIM":
+			path = "cahp-sim"
+		case "CAHP_RT":
+			path = "../share/kvsp/cahp-rt"
+		default:
+			return "", errors.New("Invalid name")
+		}
 	}
 
 	if relative {
@@ -88,7 +97,7 @@ func execCmd(name string, args []string) error {
 
 func getCloudKey(keyFileName string) ([]byte, error) {
 	// Get the path of tfheutil
-	tfheutilPath, err := getPathOf("tfheutil")
+	tfheutilPath, err := getPathOf("TFHEUTIL")
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +120,7 @@ func getCloudKey(keyFileName string) ([]byte, error) {
 
 func encryptBit(keyFileName string, bit bool) ([]byte, error) {
 	// Get the path of tfheutil
-	tfheutilPath, err := getPathOf("tfheutil")
+	tfheutilPath, err := getPathOf("TFHEUTIL")
 	if err != nil {
 		return nil, err
 	}
@@ -147,7 +156,7 @@ func encryptBit(keyFileName string, bit bool) ([]byte, error) {
 
 func encryptBytes(keyFileName string, plain []byte) ([]byte, error) {
 	// Get the path of tfheutil
-	tfheutilPath, err := getPathOf("tfheutil")
+	tfheutilPath, err := getPathOf("TFHEUTIL")
 	if err != nil {
 		return nil, err
 	}
@@ -179,7 +188,7 @@ func encryptBytes(keyFileName string, plain []byte) ([]byte, error) {
 
 func decryptBit(keyFileName string, enc []byte) (bool, error) {
 	// Get the path of tfheutil
-	tfheutilPath, err := getPathOf("tfheutil")
+	tfheutilPath, err := getPathOf("TFHEUTIL")
 	if err != nil {
 		return false, err
 	}
@@ -220,7 +229,7 @@ func decryptBit(keyFileName string, enc []byte) (bool, error) {
 
 func decryptBytes(keyFileName string, enc []byte) ([]byte, error) {
 	// Get the path of tfheutil
-	tfheutilPath, err := getPathOf("tfheutil")
+	tfheutilPath, err := getPathOf("TFHEUTIL")
 	if err != nil {
 		return nil, err
 	}
@@ -448,13 +457,13 @@ func (packet *KVSPResPacket) ReadFrom(reader io.Reader) (int64, error) {
 
 func doCC() error {
 	// Get the path of clang
-	path, err := getPathOf("clang")
+	path, err := getPathOf("CLANG")
 	if err != nil {
 		fatalExit(err)
 	}
 
 	// Get the path of cahp-rt
-	cahpRtPath, err := getPathOf("cahp-rt")
+	cahpRtPath, err := getPathOf("CAHP_RT")
 	if err != nil {
 		fatalExit(err)
 	}
@@ -465,7 +474,7 @@ func doCC() error {
 
 func doEmu() error {
 	// Get the path of cahp-sim
-	path, err := getPathOf("cahp-sim")
+	path, err := getPathOf("CAHP_SIM")
 	if err != nil {
 		fatalExit(err)
 	}
@@ -667,7 +676,7 @@ func doGenkey() error {
 	}
 
 	// Get the path of tfheutil
-	path, err := getPathOf("tfheutil")
+	path, err := getPathOf("TFHEUTIL")
 	if err != nil {
 		fatalExit(err)
 	}
