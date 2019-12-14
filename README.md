@@ -17,8 +17,8 @@ $ git submodule update --init --recursive
 ## Build KVSP. (It may take a while.)
 $ make
 
-## Change our working directory to `build/` to use KVSP.
-$ cd build
+## Change our working directory to `build/bin/`.
+$ cd build/bin
 
 ## Write some C code...
 $ vim fib.c
@@ -54,10 +54,10 @@ $ ./kvsp genkey -o secret.key
 ## Encrypt `fib` with `secret.key` to get an encrypted executable file (`fib.enc`).
 $ ./kvsp enc -k secret.key -i fib -o fib.enc
 
-## Run `fib.enc` for 50 clocks to get an encrypted result (`result.enc`).
-## Notice that we DON'T need the secret key (`secret.key`) in executing,
+## Run `fib.enc` for 400 clocks to get an encrypted result (`result.enc`).
+## Notice that we DON'T need the secret key (`secret.key`) here,
 ## which means the encrypted program (`fib.enc`) runs without decryption!
-$ ./kvsp run -i fib.enc -o result.enc -c 50
+$ ./kvsp run -i fib.enc -o result.enc -c 400
 
 ## Decrypt `result.enc` with `secret.key` to print the result.
 $ ./kvsp dec -k secret.key -i result.enc
