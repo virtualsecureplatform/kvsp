@@ -58,7 +58,21 @@ $ ./kvsp enc -k secret.key -i fib -o fib.enc
 ## Notice that we DON'T need the secret key (`secret.key`) here,
 ## which means the encrypted program (`fib.enc`) runs without decryption!
 $ ./kvsp run -i fib.enc -o result.enc -c 400
+ExecCycle:400
+ThreadNum:13
+LogicFile:/path/to/kvsp/build/share/kvsp/vsp-core.json
+CipherFile:fib.enc
+ResultFile:result.enc
+
+...
 
 ## Decrypt `result.enc` with `secret.key` to print the result.
 $ ./kvsp dec -k secret.key -i result.enc
+...
+
+Reg 8 : 5
+
+...
+
+## We could get the correct answer using secure computation!
 ```
