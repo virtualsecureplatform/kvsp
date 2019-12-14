@@ -71,7 +71,7 @@ func getPathOf(name string) (string, error) {
 		case "IYOKANL2":
 			path = "iyokanl2"
 		case "VSPCORE":
-			path = "../share/kvsp/vsp-core-converted.json"
+			path = "../share/kvsp/vsp-core.json"
 		default:
 			return "", errors.New("Invalid name")
 		}

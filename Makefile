@@ -1,7 +1,7 @@
 SHELL=/bin/bash
 NCORES=$(shell grep cpu.cores /proc/cpuinfo | sort -u | sed 's/[^0-9]//g')
 
-all: prepare build/kvsp build/tools build/Iyokan-L1 build/llvm-cahp build/cahp-rt
+all: prepare build/kvsp build/tools build/share/kvsp/vsp-core.json build/llvm-cahp build/cahp-rt
 
 prepare: FORCE
 	mkdir -p build/bin
@@ -28,13 +28,13 @@ build/core: FORCE
 	cp -r cahp-diamond build/core
 	cd build/core && sbt run
 
-build/Iyokan-L1: build/core FORCE
+build/share/kvsp/vsp-core.json: build/core FORCE
 	cp -r Iyokan-L1 build/Iyokan-L1
 	cp build/core/VSPCore.v build/Iyokan-L1
 	cd build/Iyokan-L1 && \
 		yosys build.ys && \
 		dotnet run vsp-core.json vsp-core-converted.json
-	cp build/Iyokan-L1/vsp-core-converted.json build/share/kvsp/vsp-core-converted.json
+	cp build/Iyokan-L1/vsp-core-converted.json build/share/kvsp/vsp-core.json
 
 build/llvm-cahp: FORCE
 	mkdir -p build/llvm-cahp
