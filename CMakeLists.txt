@@ -10,8 +10,9 @@ project(kvsp)
 add_subdirectory(cahp-sim)
 add_subdirectory(tfheutil)
 add_subdirectory(tfhe/src)
+add_subdirectory(Iyokan-L2)
 
-set_target_properties(cahp-sim tfheutil
+set_target_properties(cahp-sim tfheutil iyokanl2
     PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
     LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
