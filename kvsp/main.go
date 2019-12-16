@@ -13,7 +13,10 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 )
+
+var flagVerbose bool
 
 func fatalExit(err error) {
 	log.Fatal(err)
@@ -91,6 +94,14 @@ func getPathOf(name string) (string, error) {
 }
 
 func execCmd(name string, args []string) error {
+	if flagVerbose {
+		fmtArgs := make([]string, len(args))
+		for i, arg := range args {
+			fmtArgs[i] = fmt.Sprintf("'%s'", arg)
+		}
+		fmt.Fprintf(os.Stderr, "exec: '%s' %s\n", name, strings.Join(fmtArgs, " "))
+	}
+
 	cmd := exec.Command(name, args...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
@@ -634,6 +645,10 @@ Usage:
 }
 
 func main() {
+	if envvarVerbose := os.Getenv("KVSP_VERBOSE"); envvarVerbose == "1" {
+		flagVerbose = true
+	}
+
 	if len(os.Args) <= 1 {
 		printUsageAndExit()
 	}
