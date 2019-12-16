@@ -416,6 +416,7 @@ func doEmu() error {
 	if err != nil {
 		return err
 	}
+	defer os.Remove(reqTmpFile.Name())
 	_, err = packet.WriteTo(reqTmpFile)
 	if err != nil {
 		return err
@@ -426,7 +427,7 @@ func doEmu() error {
 	if err != nil {
 		return err
 	}
-	defer os.Remove(reqTmpFile.Name())
+	defer os.Remove(resTmpFile.Name())
 	err = runIyokanl2(reqTmpFile.Name(), resTmpFile.Name(), "--plain")
 	if err != nil {
 		return err
