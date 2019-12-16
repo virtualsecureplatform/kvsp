@@ -626,7 +626,8 @@ func doRun() error {
 		return errors.New("Specify -c, -i, and -o options properly")
 	}
 
-	return runIyokanl2("-o", *outputFileName, "-i", *inputFileName, "-c", fmt.Sprint(nClocks))
+	return runIyokanl2(
+		"-o", *outputFileName, "-i", *inputFileName, "-c", fmt.Sprint(*nClocks))
 }
 
 func printUsageAndExit() {
