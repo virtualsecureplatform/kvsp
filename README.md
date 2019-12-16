@@ -76,3 +76,12 @@ Reg 8 : 5
 
 ## We could get the correct answer using secure computation!
 ```
+
+## Build KVSP Using Docker
+
+Based on Ubuntu 18.04 LTS image.
+
+```
+# docker build -t kvsp-build .
+# docker run -it -v $PWD:/build -w /build kvsp-build:latest
+```
