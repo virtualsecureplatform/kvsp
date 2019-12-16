@@ -641,18 +641,18 @@ func main() {
 	switch os.Args[1] {
 	case "cc":
 		err = doCC()
+	case "debug":
+		err = doDebug()
 	case "dec":
 		err = doDec()
+	case "emu":
+		err = doEmu()
 	case "enc":
 		err = doEnc()
 	case "genkey":
 		err = doGenkey()
 	case "run":
 		err = doRun()
-	case "debug":
-		err = doDebug()
-	case "emu":
-		err = doEmu()
 	default:
 		printUsageAndExit()
 	}
