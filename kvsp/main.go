@@ -307,7 +307,7 @@ func parseELF(fileName string) ([]byte, []byte, error) {
 	return rom, ram, nil
 }
 
-func runIyokanl2(inputFileName, outputFileName string, args ...string) error {
+func runIyokanl2(args ...string) error {
 	// Get the path of iyokanl2.
 	iyokanl2Path, err := getPathOf("IYOKANL2")
 	if err != nil {
@@ -327,8 +327,6 @@ func runIyokanl2(inputFileName, outputFileName string, args ...string) error {
 	return execCmd(iyokanl2Path, append([]string{
 		"-t", fmt.Sprint(numThreads),
 		"-l", vspcorePath,
-		"-i", inputFileName,
-		"-o", outputFileName,
 	}, args...))
 }
 
@@ -439,7 +437,7 @@ func doEmu() error {
 		return err
 	}
 	defer os.Remove(resTmpFile.Name())
-	err = runIyokanl2(reqTmpFile.Name(), resTmpFile.Name(), "--plain")
+	err = runIyokanl2("-o", resTmpFile.Name(), "-p", reqTmpFile.Name())
 	if err != nil {
 		return err
 	}
@@ -628,7 +626,7 @@ func doRun() error {
 		return errors.New("Specify -c, -i, and -o options properly")
 	}
 
-	return runIyokanl2(*inputFileName, *outputFileName, "-c", fmt.Sprint(nClocks))
+	return runIyokanl2("-o", *outputFileName, "-i", *inputFileName, "-c", fmt.Sprint(nClocks))
 }
 
 func printUsageAndExit() {
