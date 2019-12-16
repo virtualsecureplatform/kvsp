@@ -460,6 +460,208 @@ func (packet *KVSPResPacket) ReadFrom(reader io.Reader) (int64, error) {
 	return 0, nil
 }
 
+// KVSPPlainReqPacketHeader represents KVSP plain request packet header
+type KVSPPlainReqPacketHeader struct {
+	KVSP    [4]byte // VSP signature
+	Version uint32  // Version
+	ROMSize uint64  // Size of ROM
+	RAMSize uint64  // Size of RAM
+}
+
+// KVSPPlainReqPacket represents KVSP plain request packet
+type KVSPPlainReqPacket struct {
+	KVSPPlainReqPacketHeader
+	ROM []byte
+	RAM []byte
+}
+
+// KVSPPlainResPacketHeader represents KVSP plain response packet header
+type KVSPPlainResPacketHeader struct {
+	KVSP      [4]byte // VSP signature
+	Version   uint32  // Version
+	Nflags    uint16  // Number of flags
+	Nregs     uint16  // Number of registers
+	FlagsSize uint64  // Size of flags
+	RegsSize  uint64  // Size of registers
+	RAMSize   uint64  // Size of RAM
+}
+
+// KVSPPlainResPacket represents KVSP plain response packet
+type KVSPPlainResPacket struct {
+	KVSPPlainResPacketHeader
+	Flags []bool
+	Regs  []uint16
+	RAM   []uint8
+}
+
+// WriteTo will dump the content to writer
+// FIXME: The first return value is dummy
+func (packet *KVSPPlainReqPacket) WriteTo(writer io.Writer) (int64, error) {
+	// Write packet's header
+	err := binary.Write(writer, binary.LittleEndian, packet.KVSPPlainReqPacketHeader)
+	if err != nil {
+		return 0, err
+	}
+
+	// Write the encrypted ROM image
+	_, err = writer.Write(packet.ROM)
+	if err != nil {
+		return 0, err
+	}
+
+	// Write the encrypted RAM image
+	_, err = writer.Write(packet.RAM)
+	if err != nil {
+		return 0, err
+	}
+
+	return 0, nil
+}
+
+// ReadFrom will read KVSP plain response packet
+// FIXME: The first return value is dummy
+func (packet *KVSPPlainResPacket) ReadFrom(reader io.Reader) (int64, error) {
+	// Read the header
+	err := binary.Read(reader, binary.LittleEndian, &packet.KVSPPlainResPacketHeader)
+	if err != nil {
+		return 0, err
+	}
+
+	// Check if the header is correct
+	header := &packet.KVSPPlainResPacketHeader
+	if header.KVSP != [4]byte{'K', 'V', 'S', 'P'} || header.Version != 0 {
+		return 0, errors.New("Invalid signature")
+	}
+
+	packet.Flags = make([]bool, header.Nflags)
+	flagsBuf := make([]byte, header.Nflags)
+	_, err = reader.Read(flagsBuf)
+	if err != nil {
+		return 0, err
+	}
+	for i := range flagsBuf {
+		b := flagsBuf[i]
+		if b != 0 {
+			packet.Flags[i] = true
+		} else {
+			packet.Flags[i] = false
+		}
+	}
+
+	packet.Regs = make([]uint16, header.Nregs)
+	for i := range packet.Regs {
+		err := binary.Read(reader, binary.LittleEndian, &packet.Regs[i])
+		if err != nil {
+			return 0, err
+		}
+	}
+
+	packet.RAM = make([]byte, header.RAMSize)
+	_, err = reader.Read(packet.RAM)
+	if err != nil {
+		return 0, err
+	}
+
+	return 0, nil
+}
+
+// Parse the input as ELF and get ROM and RAM images.
+func parseELF(fileName string) ([]byte, []byte, error) {
+	input, err := elf.Open(fileName)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	rom := make([]byte, 512)
+	ram := make([]byte, 512)
+
+	for _, prog := range input.Progs {
+		addr := prog.ProgHeader.Vaddr
+		size := prog.ProgHeader.Filesz
+		if size == 0 {
+			continue
+		}
+
+		var mem []byte
+		if addr < 0x10000 { // ROM
+			mem = rom[addr : addr+size]
+		} else { // RAM
+			mem = ram[addr-0x10000 : addr-0x10000+size]
+		}
+
+		reader := prog.Open()
+		_, err := reader.Read(mem)
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+
+	return rom, ram, nil
+}
+
+func runIyokanl2(inputFileName, outputFileName string, args ...string) error {
+	// Get the path of iyokanl2.
+	iyokanl2Path, err := getPathOf("IYOKANL2")
+	if err != nil {
+		return err
+	}
+
+	// Get the path of VSP core.
+	vspcorePath, err := getPathOf("VSPCORE")
+	if err != nil {
+		return err
+	}
+
+	// Set #CPUs plus 1 as #threads of iyokanl2.
+	numThreads := runtime.NumCPU() + 1
+
+	// Run the encrypted program as is.
+	return execCmd(iyokanl2Path, append([]string{
+		"-t", fmt.Sprint(numThreads),
+		"-l", vspcorePath,
+		"-i", inputFileName,
+		"-o", outputFileName,
+	}, args...))
+}
+
+func printRes(flags []bool, regs []uint16, ram []uint8) error {
+	for i, flag := range flags {
+		fmt.Printf("Flag %d : %t\n", i, flag)
+	}
+	fmt.Printf("\n")
+	for i, reg := range regs {
+		fmt.Printf("Reg %d : %d\n", i, reg)
+	}
+	fmt.Printf("\nRAM :\n")
+	for i, b := range ram {
+		fmt.Printf("%02x ", b)
+		if i%16 == 15 {
+			fmt.Printf("\n")
+		}
+	}
+	fmt.Printf("\n")
+
+	return nil
+}
+
+func printResAsJSON(flags []bool, regs []uint16, ram []uint8) error {
+	ramReadable := make([]int, len(ram))
+	for i, b := range ram {
+		ramReadable[i] = int(b)
+	}
+	json, err := json.Marshal(struct {
+		Flags []bool
+		Regs  []uint16
+		RAM   []int
+	}{flags, regs, ramReadable})
+	if err != nil {
+		return err
+	}
+	os.Stdout.Write(json)
+
+	return nil
+}
+
 func doCC() error {
 	// Get the path of clang
 	path, err := getPathOf("CLANG")
@@ -477,7 +679,7 @@ func doCC() error {
 	return execCmd(path, append(os.Args[2:], "-target", "cahp", "-Oz", "--sysroot", cahpRtPath))
 }
 
-func doEmu() error {
+func doDebug() error {
 	// Get the path of cahp-sim
 	path, err := getPathOf("CAHP_SIM")
 	if err != nil {
@@ -486,6 +688,64 @@ func doEmu() error {
 
 	// Run
 	return execCmd(path, os.Args[2:])
+}
+
+func doEmu() error {
+	fileName := os.Args[2]
+	if !fileExists(fileName) {
+		return errors.New("File not found")
+	}
+
+	// Parse input ELF.
+	rom, ram, err := parseELF(fileName)
+	if err != nil {
+		return err
+	}
+
+	// Create a KVSP plain request packet to write in.
+	packet := KVSPPlainReqPacket{
+		KVSPPlainReqPacketHeader{
+			[4]byte{'K', 'V', 'S', 'P'},
+			0,
+			uint64(len(rom)),
+			uint64(len(ram)),
+		},
+		rom,
+		ram,
+	}
+
+	// Write the packet to a temporary file.
+	reqTmpFile, err := ioutil.TempFile("", "")
+	if err != nil {
+		return err
+	}
+	_, err = packet.WriteTo(reqTmpFile)
+	if err != nil {
+		return err
+	}
+
+	// Run iyokanl2 to get emulation result.
+	resTmpFile, err := ioutil.TempFile("", "")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(reqTmpFile.Name())
+	err = runIyokanl2(reqTmpFile.Name(), resTmpFile.Name(), "--plain")
+	if err != nil {
+		return err
+	}
+
+	// Read the result.
+	resPacket := KVSPPlainResPacket{}
+	_, err = resPacket.ReadFrom(resTmpFile)
+	if err != nil {
+		return err
+	}
+
+	// Print result
+	printRes(resPacket.Flags, resPacket.Regs, resPacket.RAM)
+
+	return nil
 }
 
 func doDec() error {
@@ -542,36 +802,13 @@ func doDec() error {
 
 	// Print the result as JSON
 	if *shouldOutputJSON {
-		ramReadable := make([]int, len(ram))
-		for i, b := range ram {
-			ramReadable[i] = int(b)
-		}
-		json, err := json.Marshal(struct {
-			Flags []bool
-			Regs  []uint16
-			RAM   []int
-		}{flags, regs, ramReadable})
-		if err != nil {
-			return err
-		}
-		os.Stdout.Write(json)
+		err = printResAsJSON(flags, regs, ram)
 	} else {
 		// Print the result
-		for i, flag := range flags {
-			fmt.Printf("Flag %d : %t\n", i, flag)
-		}
-		fmt.Printf("\n")
-		for i, reg := range regs {
-			fmt.Printf("Reg %d : %d\n", i, reg)
-		}
-		fmt.Printf("\nRAM :\n")
-		for i, b := range ram {
-			fmt.Printf("%02x ", b)
-			if i%16 == 15 {
-				fmt.Printf("\n")
-			}
-		}
-		fmt.Printf("\n")
+		err = printRes(flags, regs, ram)
+	}
+	if err != nil {
+		return err
 	}
 
 	return nil
@@ -593,34 +830,10 @@ func doEnc() error {
 		return errors.New("Specify -k, -i, and -o options properly")
 	}
 
-	// Parse the input as ELF and get ROM and RAM images
-	input, err := elf.Open(*inputFileName)
+	// Parse input ELF.
+	rom, ram, err := parseELF(*inputFileName)
 	if err != nil {
 		return err
-	}
-
-	rom := make([]byte, 512)
-	ram := make([]byte, 512)
-
-	for _, prog := range input.Progs {
-		addr := prog.ProgHeader.Vaddr
-		size := prog.ProgHeader.Filesz
-		if size == 0 {
-			continue
-		}
-
-		var mem []byte
-		if addr < 0x10000 { // ROM
-			mem = rom[addr : addr+size]
-		} else { // RAM
-			mem = ram[addr-0x10000 : addr-0x10000+size]
-		}
-
-		reader := prog.Open()
-		_, err := reader.Read(mem)
-		if err != nil {
-			return err
-		}
 	}
 
 	// Encrypt the images
@@ -706,29 +919,7 @@ func doRun() error {
 		return errors.New("Specify -c, -i, and -o options properly")
 	}
 
-	// Get the path of iyokanl2.
-	iyokanl2Path, err := getPathOf("IYOKANL2")
-	if err != nil {
-		return err
-	}
-
-	// Get the path of VSP core.
-	vspcorePath, err := getPathOf("VSPCORE")
-	if err != nil {
-		return err
-	}
-
-	// Set #CPUs plus 1 as #threads of iyokanl2.
-	nThreads := runtime.NumCPU() + 1
-
-	// Run the encrypted program as is.
-	return execCmd(iyokanl2Path, []string{
-		"-c", fmt.Sprint(*nClocks),
-		"-t", fmt.Sprint(nThreads),
-		"-l", vspcorePath,
-		"-i", *inputFileName,
-		"-o", *outputFileName,
-	})
+	return runIyokanl2(*inputFileName, *outputFileName, "-c", fmt.Sprint(nClocks))
 }
 
 func printUsageAndExit() {
@@ -759,6 +950,8 @@ func main() {
 		err = doGenkey()
 	case "run":
 		err = doRun()
+	case "debug":
+		err = doDebug()
 	case "emu":
 		err = doEmu()
 	default:
