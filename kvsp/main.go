@@ -71,6 +71,8 @@ func getPathOf(name string) (string, error) {
 			path = "../share/kvsp/cahp-rt"
 		case "IYOKANL2":
 			path = "iyokanl2"
+		case "IYOKANL2_CUFHE":
+			path = "iyokanl2-cufhe"
 		case "VSPCORE":
 			path = "../share/kvsp/vsp-core.json"
 		default:
@@ -326,6 +328,25 @@ func runIyokanl2(args ...string) error {
 	// Run the encrypted program as is.
 	return execCmd(iyokanl2Path, append([]string{
 		"-t", fmt.Sprint(numThreads),
+		"-l", vspcorePath,
+	}, args...))
+}
+
+func runIyokanl2CuFHE(args ...string) error {
+	// Get the path of iyokanl2-cufhe.
+	iyokanl2Path, err := getPathOf("IYOKANL2_CUFHE")
+	if err != nil {
+		return err
+	}
+
+	// Get the path of VSP core.
+	vspcorePath, err := getPathOf("VSPCORE")
+	if err != nil {
+		return err
+	}
+
+	// Run the encrypted program as is.
+	return execCmd(iyokanl2Path, append([]string{
 		"-l", vspcorePath,
 	}, args...))
 }
@@ -617,6 +638,7 @@ func doRun() error {
 		nClocks        = fs.Uint("c", 0, "Number of clocks to run")
 		inputFileName  = fs.String("i", "", "Input file name (encrypted)")
 		outputFileName = fs.String("o", "", "Output file name (encrypted)")
+		isGPU          = fs.Bool("g", false, "")
 	)
 	err := fs.Parse(os.Args[2:])
 	if err != nil {
@@ -626,8 +648,13 @@ func doRun() error {
 		return errors.New("Specify -c, -i, and -o options properly")
 	}
 
-	return runIyokanl2(
-		"-o", *outputFileName, "-i", *inputFileName, "-c", fmt.Sprint(*nClocks))
+	if *isGPU {
+		return runIyokanl2CuFHE(
+			"-o", *outputFileName, "-i", *inputFileName, "-c", fmt.Sprint(*nClocks))
+	} else {
+		return runIyokanl2(
+			"-o", *outputFileName, "-i", *inputFileName, "-c", fmt.Sprint(*nClocks))
+	}
 }
 
 func printUsageAndExit() {
