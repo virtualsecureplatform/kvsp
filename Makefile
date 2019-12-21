@@ -1,7 +1,11 @@
 SHELL=/bin/bash
 NCORES=$(shell grep cpu.cores /proc/cpuinfo | sort -u | sed 's/[^0-9]//g')
 
-all: prepare build/kvsp build/tools build/share/kvsp/vsp-core.json build/llvm-cahp build/cahp-rt
+cpu: common build/tools
+
+gpu: common build/tools_gpu
+
+common: prepare build/kvsp build/share/kvsp/vsp-core.json build/llvm-cahp build/cahp-rt
 
 prepare: FORCE
 	mkdir -p build/bin
@@ -20,17 +24,31 @@ build/tools: FORCE
 			-DENABLE_FFTW=off \
 			-DENABLE_NAYUKI_PORTABLE=off -DENABLE_NAYUKI_AVX=off \
 			-DENABLE_SPQLIOS_AVX=on -DENABLE_SPQLIOS_FMA=off \
+			-DKVSP_ENABLE_CUDA=off \
 			../.. && \
 		make -j $$(( $(NCORES) + 1 ))
 	cp build/tools/bin/* build/bin/
 
+build/tools_gpu: FORCE
+	mkdir -p build/tools_gpu
+	cd build/tools_gpu && \
+		cmake \
+			-DCMAKE_BUILD_TYPE="Release" \
+			-DENABLE_FFTW=off \
+			-DENABLE_NAYUKI_PORTABLE=off -DENABLE_NAYUKI_AVX=off \
+			-DENABLE_SPQLIOS_AVX=on -DENABLE_SPQLIOS_FMA=off \
+			-DKVSP_ENABLE_CUDA=on \
+			../.. && \
+		make -j $$(( $(NCORES) + 1 ))
+	cp build/tools_gpu/bin/* build/bin/
+
 build/core: FORCE
-	cp -r cahp-diamond build/core
+	rsync -a --delete cahp-diamond/ build/core/
 	cd build/core && sbt run
 
 build/share/kvsp/vsp-core.json: build/core FORCE
-	cp -r Iyokan-L1 build/Iyokan-L1
-	cp build/core/VSPCore.v build/Iyokan-L1
+	cp -r Iyokan-L1 build/
+	cp build/core/VSPCore.v build/Iyokan-L1/
 	cd build/Iyokan-L1 && \
 		yosys build.ys && \
 		dotnet run vsp-core.json vsp-core-converted.json
@@ -49,7 +67,7 @@ build/llvm-cahp: FORCE
 	cp build/llvm-cahp/bin/* build/bin/
 
 build/cahp-rt: build/llvm-cahp FORCE
-	cp -r cahp-rt build/cahp-rt
+	cp -r cahp-rt build/
 	cd build/cahp-rt && CC=../llvm-cahp/bin/clang make
 	mkdir -p build/share/kvsp/cahp-rt
 	cd build/cahp-rt && \
