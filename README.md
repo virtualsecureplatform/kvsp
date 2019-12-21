@@ -33,8 +33,13 @@ $ vim fib.c
 $ cat fib.c
 int fib(int n)
 {
-    if (n <= 1) return n;
-    return fib(n - 1) + fib(n - 2);
+    int a = 0, b = 1;
+    for (int i = 0; i < n; i++) {
+        int tmp = a + b;
+        a = b;
+        b = tmp;
+    }
+    return a;
 }
 
 int main()
@@ -51,7 +56,7 @@ $ ./kvsp cc fib.c -o fib
 $ ./kvsp emu fib
 LogicFile:/path/to/kvsp/build/share/kvsp/vsp-core.json
 ResultFile:/tmp/389221298
-Exec count:346
+Exec count:13
 ---Debug Output---
 
 ...
@@ -69,15 +74,15 @@ $ ./kvsp genkey -o secret.key
 ## Encrypt `fib` with `secret.key` to get an encrypted executable file (`fib.enc`).
 $ ./kvsp enc -k secret.key -i fib -o fib.enc
 
-## Run `fib.enc` for 346 clocks to get an encrypted result (`result.enc`).
+## Run `fib.enc` for 13 clocks to get an encrypted result (`result.enc`).
 ## (The number of clocks here is decided depending on the `Exec count` of
 ## the result of `kvsp emu fib` above.)
 ## Notice that we DON'T need the secret key (`secret.key`) here,
 ## which means the encrypted program (`fib.enc`) runs without decryption!
-$ ./kvsp run -i fib.enc -o result.enc -c 346
+$ ./kvsp run -i fib.enc -o result.enc -c 13 ## Use -g option if you have GPUs.
 LogicFile:/path/to/kvsp/share/kvsp/vsp-core.json
 ResultFile:result.enc
-ExecCycle:346
+ExecCycle:13
 ThreadNum:13
 CipherFile:fib.enc
 
