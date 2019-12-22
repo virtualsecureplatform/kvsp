@@ -48,7 +48,7 @@ $ ./kvsp cc fib.c -o fib
 ## Let's check if the program is correct by emulator, which runs
 ## without encryption.
 $ ./kvsp emu fib
-LogicFile:/path/to/kvsp/build/share/kvsp/vsp-core.json
+LogicFile:/path/to/kvsp/share/kvsp/vsp-core.json
 ResultFile:/tmp/389221298
 Exec count:13
 ---Debug Output---
@@ -59,7 +59,9 @@ Reg 8 : 5
 
 ...
 
-## We can see `Reg 8 : 5` here, so it seems to work correctly.
+## We can see `Reg 8 : 5` here, so the program above seems correct.
+## Also we now know it takes 13 clocks by `Exec count:13`.
+
 ## Now we will run the same program with encryption.
 
 ## Generate a secret key (`secret.key`).
@@ -69,16 +71,17 @@ $ ./kvsp genkey -o secret.key
 $ ./kvsp enc -k secret.key -i fib -o fib.enc
 
 ## Run `fib.enc` for 13 clocks to get an encrypted result (`result.enc`).
-## (The number of clocks here is decided depending on the `Exec count` of
-## the result of `kvsp emu fib` above.)
 ## Notice that we DON'T need the secret key (`secret.key`) here,
 ## which means the encrypted program (`fib.enc`) runs without decryption!
 $ ./kvsp run -i fib.enc -o result.enc -c 13 ## Use -g option if you have GPUs.
 LogicFile:/path/to/kvsp/share/kvsp/vsp-core.json
 ResultFile:result.enc
 ExecCycle:13
-ThreadNum:13
+ThreadNum:17
 CipherFile:fib.enc
+Execution time 661857.385000[ms]
+---Debug Output---
+---Execution Stats---
 
 ...
 
