@@ -11,41 +11,35 @@ KVSP consists of many other sub-projects.
 `kvsp` command, which this repository serves, is
 a simple interface to use them easily.
 
-## Tutorial
+## Quick Start
 
 ```
-## Clone this repository.
-$ git clone https://github.com/virtualsecureplatform/kvsp.git
-
-## Clone submodules recursively.
-$ git submodule update --init --recursive
-
-## Build KVSP. (It may take a while.)
-$ make
-
-## Change our working directory to `build/bin/`.
-$ cd build/bin
+## Download a KVSP release and unzip it.
+## (It has been compiled on Ubuntu 18.04 LTS. If it doesn't work in the following steps,
+## please read sections below and try to build KVSP on your own.
+## It may be time-consuming, but not so hard.)
+$ wget 'https://github.com/virtualsecureplatform/kvsp/releases/download/v2/kvsp_v2.tar.gz'
+$ tar xf kvsp_v2.tar.gz
+$ cd kvsp_v2/bin
 
 ## Write some C code...
 $ vim fib.c
 
-## ...like so.
+## ...like so. This program computes the 5th term of the Fibonacci sequence, that is, 5.
 $ cat fib.c
-int fib(int n)
-{
-    int a = 0, b = 1;
-    for (int i = 0; i < n; i++) {
-        int tmp = a + b;
-        a = b;
-        b = tmp;
-    }
-    return a;
+static int fib(int n) {
+  int a = 0, b = 1;
+  for (int i = 0; i < n; i++) {
+    int tmp = a + b;
+    a = b;
+    b = tmp;
+  }
+  return a;
 }
 
-int main()
-{
-    // The result will be set in the register x8.
-    return fib(5);
+int main() {
+  // The result will be set in the register x8.
+  return fib(5);
 }
 
 ## Compile the C code (`fib.c`) to an executable file (`fib`).
@@ -65,7 +59,7 @@ Reg 8 : 5
 
 ...
 
-## We can see `Reg 8 : 5` here and fib(5) is indeed 5, so it seems to work correctly.
+## We can see `Reg 8 : 5` here, so it seems to work correctly.
 ## Now we will run the same program with encryption.
 
 ## Generate a secret key (`secret.key`).
@@ -97,6 +91,19 @@ Reg 8 : 5
 ...
 
 ## We could get the correct answer using secure computation!
+```
+
+## Build
+
+```
+## Clone this repository.
+$ git clone https://github.com/virtualsecureplatform/kvsp.git
+
+## Clone submodules recursively.
+$ git submodule update --init --recursive
+
+## Build KVSP. (It may take a while.)
+$ make
 ```
 
 ## Build KVSP Using Docker
