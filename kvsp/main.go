@@ -6,6 +6,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -109,6 +110,29 @@ func execCmd(name string, args []string) error {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
+}
+
+func writePlainPacket(w io.Writer, inputElfFileName string) error {
+	// Parse input ELF.
+	rom, ram, err := parseELF(inputElfFileName)
+	if err != nil {
+		return err
+	}
+
+	// Create a KVSP plain request packet to write in.
+	packet := KVSPPlainReqPacket{
+		KVSPPlainReqPacketHeader{
+			[4]byte{'K', 'V', 'S', 'P'},
+			0,
+			uint64(len(rom)),
+			uint64(len(ram)),
+		},
+		rom,
+		ram,
+	}
+
+	_, err = packet.WriteTo(w)
+	return err
 }
 
 func getCloudKey(keyFileName string) ([]byte, error) {
@@ -423,31 +447,13 @@ func doEmu() error {
 		return errors.New("File not found")
 	}
 
-	// Parse input ELF.
-	rom, ram, err := parseELF(fileName)
-	if err != nil {
-		return err
-	}
-
-	// Create a KVSP plain request packet to write in.
-	packet := KVSPPlainReqPacket{
-		KVSPPlainReqPacketHeader{
-			[4]byte{'K', 'V', 'S', 'P'},
-			0,
-			uint64(len(rom)),
-			uint64(len(ram)),
-		},
-		rom,
-		ram,
-	}
-
 	// Write the packet to a temporary file.
 	reqTmpFile, err := ioutil.TempFile("", "")
 	if err != nil {
 		return err
 	}
 	defer os.Remove(reqTmpFile.Name())
-	_, err = packet.WriteTo(reqTmpFile)
+	err = writePlainPacket(reqTmpFile, fileName)
 	if err != nil {
 		return err
 	}
@@ -631,6 +637,34 @@ func doGenkey() error {
 	return execCmd(path, []string{"genkey", *outputFileName})
 }
 
+func doPlainpacket() error {
+	// Parse command-line arguments.
+	fs := flag.NewFlagSet("enc", flag.ExitOnError)
+	var (
+		inputFileName  = fs.String("i", "", "Input file name (plain)")
+		outputFileName = fs.String("o", "", "Output file name (encrypted)")
+	)
+	err := fs.Parse(os.Args[2:])
+	if err != nil {
+		return err
+	}
+	if *inputFileName == "" || *outputFileName == "" {
+		return errors.New("Specify -i, and -o options properly")
+	}
+
+	// Write the packet to the output
+	writer, err := os.Create(*outputFileName)
+	if err != nil {
+		return err
+	}
+	err = writePlainPacket(writer, *inputFileName)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func doRun() error {
 	// Parse command-line arguments.
 	fs := flag.NewFlagSet("run", flag.ExitOnError)
@@ -693,6 +727,8 @@ func main() {
 		err = doEnc()
 	case "genkey":
 		err = doGenkey()
+	case "plainpacket":
+		err = doPlainpacket()
 	case "run":
 		err = doRun()
 	default:
