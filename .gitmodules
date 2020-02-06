@@ -16,6 +16,3 @@
 [submodule "cuFHE"]
 	path = cuFHE
 	url = https://github.com/virtualsecureplatform/cuFHE.git
-[submodule "TFHEpp"]
-	path = TFHEpp
-	url = https://github.com/virtualsecureplatform/TFHEpp.git
