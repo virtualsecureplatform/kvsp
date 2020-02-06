@@ -13,6 +13,3 @@
 [submodule "cahp-diamond"]
 	path = cahp-diamond
 	url = https://github.com/virtualsecureplatform/cahp-diamond.git
-[submodule "cuFHE"]
-	path = cuFHE
-	url = https://github.com/virtualsecureplatform/cuFHE.git
