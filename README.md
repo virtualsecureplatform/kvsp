@@ -18,9 +18,9 @@ a simple interface to use them easily.
 ## (It has been compiled on Ubuntu 18.04 LTS. If it doesn't work in the following steps,
 ## please read sections below and try to build KVSP on your own.
 ## It may be time-consuming, but not so hard.)
-$ wget 'https://github.com/virtualsecureplatform/kvsp/releases/download/v2/kvsp_v2.tar.gz'
-$ tar xf kvsp_v2.tar.gz
-$ cd kvsp_v2/bin
+$ wget 'https://github.com/virtualsecureplatform/kvsp/releases/download/v3/kvsp_v3.tar.gz'
+$ tar xf kvsp_v3.tar.gz
+$ cd kvsp_v3/bin
 
 ## Write some C code...
 $ vim fib.c
