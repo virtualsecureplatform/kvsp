@@ -1,11 +1,18 @@
 SHELL=/bin/bash
 NCORES=$(shell grep cpu.cores /proc/cpuinfo | sort -u | sed 's/[^0-9]//g')
 
-cpu: common build/tools
+### Config parameters.
+ENABLE_CUDA=0
 
-gpu: common build/tools_gpu
-
-common: prepare build/kvsp build/share/kvsp/vsp-core.json build/llvm-cahp build/cahp-rt
+all: prepare \
+	build/cahp-sim \
+	build/iyokan \
+	build/kvsp \
+	build/share/kvsp/vsp-core.json \
+	build/share/kvsp/vsp-core-wo-rom.json \
+	build/share/kvsp/vsp-core-wo-ram-rom.json \
+	build/llvm-cahp \
+	build/cahp-rt
 
 prepare: FORCE
 	mkdir -p build/bin
@@ -16,43 +23,54 @@ build/kvsp: FORCE
 	cd kvsp && go build -o ../build/kvsp/kvsp
 	cp build/kvsp/kvsp build/bin/
 
-build/tools: FORCE
-	mkdir -p build/tools
-	cd build/tools && \
+build/iyokan: FORCE
+	mkdir -p build/iyokan
+	cd build/iyokan && \
 		cmake \
 			-DCMAKE_BUILD_TYPE="Release" \
-			-DENABLE_FFTW=off \
-			-DENABLE_NAYUKI_PORTABLE=off -DENABLE_NAYUKI_AVX=off \
-			-DENABLE_SPQLIOS_AVX=on -DENABLE_SPQLIOS_FMA=off \
-			-DKVSP_ENABLE_CUDA=off \
-			../.. && \
-		make -j $$(( $(NCORES) + 1 ))
-	cp build/tools/bin/* build/bin/
+			-DIYOKAN_ENABLE_CUDA=$(ENABLE_CUDA) \
+			../../Iyokan && \
+		make -j $$(( $(NCORES) + 1 )) iyokan kvsp-packet
+	cp build/iyokan/bin/iyokan build/bin/
+	cp build/iyokan/bin/kvsp-packet build/bin/
 
-build/tools_gpu: FORCE
-	mkdir -p build/tools_gpu
-	cd build/tools_gpu && \
+build/cahp-sim: FORCE
+	mkdir -p build/cahp-sim
+	cd build/cahp-sim && \
 		cmake \
 			-DCMAKE_BUILD_TYPE="Release" \
-			-DENABLE_FFTW=off \
-			-DENABLE_NAYUKI_PORTABLE=off -DENABLE_NAYUKI_AVX=off \
-			-DENABLE_SPQLIOS_AVX=on -DENABLE_SPQLIOS_FMA=off \
-			-DKVSP_ENABLE_CUDA=on \
-			../.. && \
-		make -j $$(( $(NCORES) + 1 ))
-	cp build/tools_gpu/bin/* build/bin/
+			../../cahp-sim && \
+		make -j $$(( $(NCORES) + 1 )) cahp-sim
+	cp build/cahp-sim/src/cahp-sim build/bin/
 
 build/core: FORCE
 	rsync -a --delete cahp-diamond/ build/core/
 	cd build/core && sbt run
 
-build/share/kvsp/vsp-core.json: build/core FORCE
+build/Iyokan-L1: FORCE
 	cp -r Iyokan-L1 build/
-	cp build/core/VSPCore.v build/Iyokan-L1/
 	cd build/Iyokan-L1 && \
-		yosys build.ys && \
-		dotnet run vsp-core.json vsp-core-converted.json
-	cp build/Iyokan-L1/vsp-core-converted.json build/share/kvsp/vsp-core.json
+		dotnet build
+
+build/core/vsp-core-no-ram-rom.json: build/core FORCE
+	cd build/core && \
+		yosys build-no-ram-rom.ys
+
+build/core/vsp-core-no-rom.json: build/core FORCE
+	cd build/core && \
+		yosys build-no-rom.ys
+
+build/share/kvsp/vsp-core.json: build/core/vsp-core-no-rom.json build/Iyokan-L1 FORCE
+	cd build/Iyokan-L1 && \
+		dotnet run $@ $< --with-rom
+
+build/share/kvsp/vsp-core-wo-rom.json: build/core/vsp-core-no-rom.json build/Iyokan-L1 FORCE
+	cd build/Iyokan-L1 && \
+		dotnet run $@ $<
+
+build/share/kvsp/vsp-core-wo-ram-rom.json: build/core/vsp-core-no-ram-rom.json build/Iyokan-L1 FORCE
+	cd build/Iyokan-L1 && \
+		dotnet run $@ $<
 
 build/llvm-cahp: FORCE
 	mkdir -p build/llvm-cahp
