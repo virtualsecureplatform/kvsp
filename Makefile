@@ -1,78 +1,71 @@
 SHELL=/bin/bash
-NCORES=$(shell grep cpu.cores /proc/cpuinfo | sort -u | sed 's/[^0-9]//g')
+
+### Get # of jobs (the options -j and --jobs)
+### (thanks to: https://stackoverflow.com/questions/5303553/gnu-make-extracting-argument-to-j-within-makefile)
+MAKE_PID := $(shell echo $$PPID)
+NJOBS := $(shell ps T | sed -n 's/.*$(MAKE_PID).*$(MAKE).* \(-j\|--jobs\) *\([0-9][0-9]*\).*/\2/p')
 
 ### Config parameters.
 ENABLE_CUDA=0
 
-all: prepare \
-	build/cahp-sim \
-	build/iyokan \
-	build/kvsp \
-	build/share/kvsp/vsp-core.json \
-	build/share/kvsp/vsp-core-wo-rom.json \
-	build/share/kvsp/vsp-core-wo-ram-rom.json \
-	build/llvm-cahp \
-	build/cahp-rt
+all: PHASE2
 
-prepare: FORCE
+prepare: PHASE0
 	mkdir -p build/bin
 	mkdir -p build/share/kvsp
 
-build/kvsp: FORCE
+build/kvsp: PHASE0
 	mkdir -p build/kvsp
 	cd kvsp && go build -o ../build/kvsp/kvsp
 	cp build/kvsp/kvsp build/bin/
 
-build/iyokan: FORCE
+build/iyokan: PHASE0
 	mkdir -p build/iyokan
 	cd build/iyokan && \
 		cmake \
 			-DCMAKE_BUILD_TYPE="Release" \
 			-DIYOKAN_ENABLE_CUDA=$(ENABLE_CUDA) \
 			../../Iyokan && \
-		make -j $$(( $(NCORES) + 1 )) iyokan kvsp-packet
+		make iyokan kvsp-packet
 	cp build/iyokan/bin/iyokan build/bin/
 	cp build/iyokan/bin/kvsp-packet build/bin/
 
-build/cahp-sim: FORCE
+build/cahp-sim: PHASE0
 	mkdir -p build/cahp-sim
 	cd build/cahp-sim && \
 		cmake \
 			-DCMAKE_BUILD_TYPE="Release" \
 			../../cahp-sim && \
-		make -j $$(( $(NCORES) + 1 )) cahp-sim
+		make cahp-sim
 	cp build/cahp-sim/src/cahp-sim build/bin/
 
-build/core: FORCE
+build/core: PHASE0
 	rsync -a --delete cahp-diamond/ build/core/
 	cd build/core && sbt run
 
-build/Iyokan-L1: FORCE
+build/Iyokan-L1: PHASE0
 	cp -r Iyokan-L1 build/
 	cd build/Iyokan-L1 && \
 		dotnet build
 
-build/core/vsp-core-no-ram-rom.json: build/core FORCE
+build/core/vsp-core-no-ram-rom.json: build/core PHASE0
 	cd build/core && \
 		yosys build-no-ram-rom.ys
 
-build/core/vsp-core-no-rom.json: build/core FORCE
+build/core/vsp-core-no-rom.json: build/core PHASE0
 	cd build/core && \
 		yosys build-no-rom.ys
 
-build/share/kvsp/vsp-core.json: build/core/vsp-core-no-rom.json build/Iyokan-L1 FORCE
-	cd build/Iyokan-L1 && \
-		dotnet run $@ $< --with-rom
+build/share/kvsp/vsp-core.json: build/core/vsp-core-no-rom.json build/Iyokan-L1 PHASE0
+	dotnet run -p build/Iyokan-L1/ -i $< -o $@ --with-rom
 
-build/share/kvsp/vsp-core-wo-rom.json: build/core/vsp-core-no-rom.json build/Iyokan-L1 FORCE
-	cd build/Iyokan-L1 && \
-		dotnet run $@ $<
+build/share/kvsp/vsp-core-wo-rom.json: build/core/vsp-core-no-rom.json build/Iyokan-L1 PHASE0
+	dotnet run -p build/Iyokan-L1/ -i $< -o $@
 
-build/share/kvsp/vsp-core-wo-ram-rom.json: build/core/vsp-core-no-ram-rom.json build/Iyokan-L1 FORCE
-	cd build/Iyokan-L1 && \
-		dotnet run $@ $<
+build/share/kvsp/vsp-core-wo-ram-rom.json: build/core/vsp-core-no-ram-rom.json build/Iyokan-L1 PHASE0
+	dotnet run -p build/Iyokan-L1/ -i $< -o $@
 
-build/llvm-cahp: FORCE
+build/llvm-cahp: PHASE1
 	mkdir -p build/llvm-cahp
 	cd build/llvm-cahp && \
 		cmake \
@@ -81,16 +74,29 @@ build/llvm-cahp: FORCE
 			-DLLVM_TARGETS_TO_BUILD="" \
 			-DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD="CAHP" \
 			../../llvm-cahp/llvm && \
-		make -j $$(( $(NCORES) + 1 ))
+		make -j $(NJOBS)
 	cp build/llvm-cahp/bin/* build/bin/
 
-build/cahp-rt: build/llvm-cahp FORCE
+build/cahp-rt: build/llvm-cahp PHASE1
 	cp -r cahp-rt build/
 	cd build/cahp-rt && CC=../llvm-cahp/bin/clang make
 	mkdir -p build/share/kvsp/cahp-rt
 	cd build/cahp-rt && \
 		cp crt0.o libc.a cahp.lds ../share/kvsp/cahp-rt/
 
-FORCE:
+PHASE0:
 
-.PHONY: FORCE prepare
+PHASE1: \
+	prepare \
+	build/cahp-sim \
+	build/iyokan \
+	build/kvsp \
+	build/share/kvsp/vsp-core.json \
+	build/share/kvsp/vsp-core-wo-rom.json \
+	build/share/kvsp/vsp-core-wo-ram-rom.json
+
+PHASE2: \
+	build/llvm-cahp \
+	build/cahp-rt
+
+.PHONY: prepare PHASE0 PHASE1 PHASE2
