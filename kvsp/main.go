@@ -298,6 +298,7 @@ func doRun() error {
 		inputFileName  = fs.String("i", "", "Input file name (encrypted)")
 		outputFileName = fs.String("o", "", "Output file name (encrypted)")
 		isGPU          = fs.Bool("g", false, "")
+		nWorkers       = fs.Uint("t", 0, "Number of workers")
 	)
 	err := fs.Parse(os.Args[2:])
 	if err != nil {
@@ -312,6 +313,9 @@ func doRun() error {
 		"-i", *inputFileName,
 		"-o", *outputFileName,
 		"-c", fmt.Sprint(*nClocks),
+	}
+	if *nWorkers > 0 {
+		args = append(args, "-t", fmt.Sprint(*nWorkers))
 	}
 	if *isGPU {
 		args = append(args, "--enable-gpu")
