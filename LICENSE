@@ -4,7 +4,7 @@ different licenses.
 1. The following directories have their own LICENSE files, so read them.
 
 - Iyokan-L1/
-- Iyokan-L2/
+- Iyokan/
 - cahp-diamond/
 - cahp-rt/
 - cahp-sim/
@@ -15,17 +15,12 @@ but modified and used in this project.
 
 - llvm-cahp/
     See llvm-cahp/*/LICENSE.
-- tfhe/
-    See tfhe/LICENSE.
-- cuFHE/
-    See cuFHE/LICENSE.
 
 
 3. The following files and directories are licensed under the Apache License, Version 2.0.
 
 - files in the root directory.
 - kvsp/
-- tfheutil/
 
                                  Apache License
                            Version 2.0, January 2004
