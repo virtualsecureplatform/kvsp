@@ -13,19 +13,22 @@ a simple interface to use them easily.
 
 ## Quick Start
 
-```
-## Download a KVSP release and unzip it.
-## (It has been compiled on Ubuntu 18.04 LTS. If it doesn't work in the following steps,
-## please read sections below and try to build KVSP on your own.
-## It may be time-consuming, but not so hard.)
-$ wget 'https://github.com/virtualsecureplatform/kvsp/releases/download/v3/kvsp_v3.tar.gz'
-$ tar xf kvsp_v3.tar.gz
-$ cd kvsp_v3/bin
+Download a KVSP release and unzip it.
+(It has been compiled on Ubuntu 18.04 LTS. If it doesn't work in the following steps,
+please read __Build__ section and try to build KVSP on your own.
+It may be time-consuming, but not so hard.)
 
-## Write some C code...
+```
+$ wget 'https://github.com/virtualsecureplatform/kvsp/releases/download/v4/kvsp_v4.tar.gz'
+$ tar xf kvsp_v4.tar.gz
+$ cd kvsp_v4/bin
+```
+
+Write some C code...
+
+```
 $ vim fib.c
 
-## ...like so. This program computes the 5th term of the Fibonacci sequence, that is, 5.
 $ cat fib.c
 static int fib(int n) {
   int a = 0, b = 1;
@@ -41,72 +44,107 @@ int main() {
   // The result will be set in the register x8.
   return fib(5);
 }
+```
 
-## Compile the C code (`fib.c`) to an executable file (`fib`).
+...like so. This program (`fib.c`) computes the 5th term of the Fibonacci sequence, that is, 5.
+
+Compile the C code (`fib.c`) to an executable file (`fib`).
+
+```
 $ ./kvsp cc fib.c -o fib
+```
 
-## Let's check if the program is correct by emulator, which runs
-## without encryption.
+Let's check if the program is correct by emulator, which runs
+without encryption.
+
+```
 $ ./kvsp emu fib
-LogicFile:/path/to/kvsp/share/kvsp/vsp-core.json
-ResultFile:/tmp/389221298
-Exec count:13
----Debug Output---
+#1	done. (1001 us)
+#2	done. (903 us)
 
 ...
 
-Reg 8 : 5
+#12	done. (827 us)
+#13	done. (832 us)
+break.
+#cycle  13
 
 ...
 
-## We can see `Reg 8 : 5` here, so the program above seems correct.
-## Also we now know it takes 13 clocks by `Exec count:13`.
+x8  5
 
-## Now we will run the same program with encryption.
+...
+```
 
-## Generate a secret key (`secret.key`).
+We can see `x8  5` here, so the program above seems correct.
+Also we now know it takes 13 clocks by `#cycle  13`.
+
+Now we will run the same program with encryption.
+
+Generate a secret key (`secret.key`).
+
+```
 $ ./kvsp genkey -o secret.key
+```
 
-## Encrypt `fib` with `secret.key` to get an encrypted executable file (`fib.enc`).
+Encrypt `fib` with `secret.key` to get an encrypted executable file (`fib.enc`).
+
+```
 $ ./kvsp enc -k secret.key -i fib -o fib.enc
+```
 
-## Run `fib.enc` for 13 clocks to get an encrypted result (`result.enc`).
-## Notice that we DON'T need the secret key (`secret.key`) here,
-## which means the encrypted program (`fib.enc`) runs without decryption!
+Run `fib.enc` for 13 clocks to get an encrypted result (`result.enc`).
+Notice that we DON'T need the secret key (`secret.key`) here,
+which means the encrypted program (`fib.enc`) runs without decryption!
+
+```
 $ ./kvsp run -i fib.enc -o result.enc -c 13 ## Use -g option if you have GPUs.
-LogicFile:/path/to/kvsp/share/kvsp/vsp-core.json
-ResultFile:result.enc
-ExecCycle:13
-ThreadNum:17
-CipherFile:fib.enc
-Execution time 661857.385000[ms]
----Debug Output---
----Execution Stats---
+#1	done. (15726678 us)
+#2	done. (15948790 us)
 
 ...
 
-## Decrypt `result.enc` with `secret.key` to print the result.
+#12	done. (15699488 us)
+#13	done. (16104918 us)
+```
+
+Decrypt `result.enc` with `secret.key` to print the result.
+
+```
 $ ./kvsp dec -k secret.key -i result.enc
 ...
 
-Reg 8 : 5
+x8  5
 
 ...
-
-## We could get the correct answer using secure computation!
 ```
+
+We could get the correct answer using secure computation!
 
 ## Build
 
+Clone this repository:
+
 ```
-## Clone this repository.
 $ git clone https://github.com/virtualsecureplatform/kvsp.git
+```
 
-## Clone submodules recursively.
+Clone submodules recursively:
+
+```
 $ git submodule update --init --recursive
+```
 
-## Build KVSP. (It may take a while.)
-$ make
+Build KVSP:
+
+```
+$ make  # It may take a while.
+```
+
+Use option `ENABLE_CUDA` if you build KVSP with GPU support:
+
+```
+$ make ENABLE_CUDA=1 CUDACXX="/usr/local/cuda/bin/nvcc" CUDAHOSTCXX="/usr/bin/clang-8"
 ```
 
 ## Build KVSP Using Docker
