@@ -121,6 +121,10 @@ x8  5
 
 We could get the correct answer using secure computation!
 
+## More examples?
+
+See the directory `examples/`.
+
 ## Build
 
 Clone this repository:
