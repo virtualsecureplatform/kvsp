@@ -159,3 +159,7 @@ Based on Ubuntu 18.04 LTS image.
 # docker build -t kvsp-build .
 # docker run -it -v $PWD:/build -w /build kvsp-build:latest
 ```
+
+## Code Owners
+
+![Code Owners](code-owners.png)
