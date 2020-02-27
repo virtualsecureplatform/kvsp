@@ -125,6 +125,21 @@ We could get the correct answer using secure computation!
 
 See the directory `examples/`.
 
+## System Requirements
+
+We ensure that KVSP works on the following cloud services:
+
+- [さくらインターネット 高火力コンピューティング Tesla V100（32GB）モデル](https://www.sakura.ad.jp/koukaryoku/)
+- [AWS EC2 m5.metal](https://aws.amazon.com/ec2/instance-types/c5/)
+
+If you run KVSP locally, prepare a machine with the following devices:
+
+- Intel CPU with AVX2 support (e.g. Intel Core i7-8700)
+- 8GB RAM
+- NVIDIA GPU (not required but highly recommended)
+    - Only NVIDIA Tesla V100 is supported.
+    - Other GPUs _may_ work but are not supported.
+
 ## Build
 
 Clone this repository:
