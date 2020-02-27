@@ -19,9 +19,9 @@ please read __Build__ section and try to build KVSP on your own.
 It may be time-consuming, but not so hard.)
 
 ```
-$ wget 'https://github.com/virtualsecureplatform/kvsp/releases/download/v8/kvsp_v8.tar.gz'
-$ tar xf kvsp_v8.tar.gz
-$ cd kvsp_v8/bin
+$ wget 'https://github.com/virtualsecureplatform/kvsp/releases/latest/download/kvsp.tar.gz'
+$ tar xf kvsp.tar.gz
+$ cd kvsp_v9/bin    # The directory's name depends on the file you download.
 ```
 
 Write some C code...
