@@ -319,7 +319,7 @@ func doRun() error {
 	}
 	if *isGPU {
 		args = append(args, "--enable-gpu")
-		return runIyokan(false, true, args...)
+		return runIyokan(true, true, args...)
 	} else {
 		return runIyokan(true, true, args...)
 	}
