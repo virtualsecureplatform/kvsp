@@ -130,6 +130,7 @@ See the directory `examples/`.
 We ensure that KVSP works on the following cloud services:
 
 - [さくらインターネット 高火力コンピューティング Tesla V100（32GB）モデル](https://www.sakura.ad.jp/koukaryoku/)
+- [GCP n1-standard-96 with 8 x NVIDIA Tesla V100](https://cloud.google.com/compute/docs/machine-types?hl=ja#n1_standard_machine_types)
 - [AWS EC2 m5.metal](https://aws.amazon.com/ec2/instance-types/c5/)
 
 If you run KVSP locally, prepare a machine with the following devices:
