@@ -176,6 +176,25 @@ Based on Ubuntu 18.04 LTS image.
 # docker run -it -v $PWD:/build -w /build kvsp-build:latest
 ```
 
+## Detailed Explanation on KVSP
+
+Kyoto Virtual Secure Platform (KVSP) enables to execute a standard C program while protecting its code on cloud computing platforms.
+
+The main idea of KVSP is emulating a CPU on TFHE, which is one kind of fully homomorphic encryption. By using TFHE we can perform logical operations on ciphertexts.
+
+KVSP runs at 4 second per clock on NVIDIA V100, 2.5s on AWS's c5.metal and 1.5s on 8 V100.
+
+KVSP consists of 6 sub-projects:
+
+- Iyokan: A parallel execution engine for logic gates using homomorphic encryption.
+- CAHPv3: Our original ISA for the processor which is emulated in KVSP. Most significant features are 16bit data width and 16/24bit variable instruction width.
+- cahp-diamond: Our original CPU which implements CAHPv3. It consists of about 4K logic gates.
+- llvm-cahp: LLVM backend for CAHPv3.
+- TFHEpp & cuFHE: C++ libraries of TFHE. TFHEpp is a full-scratched library for CPU and cuFHE is modified version of an existing implementation for GPU. They make KVSP faster from a cryptographical point of view.
+- kvsp: KVSP's CUI interface.
+
+This is a research project. We are planning to publish a paper.
+
 ## Code Owners
 
 ![Code Owners](code-owners.png)
