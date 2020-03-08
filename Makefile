@@ -13,6 +13,7 @@ all: PHASE2
 prepare: PHASE0
 	mkdir -p build/bin
 	mkdir -p build/share/kvsp
+	rsync -a --delete share/* build/share/kvsp/
 
 build/kvsp: PHASE0
 	mkdir -p build/kvsp
@@ -40,7 +41,7 @@ build/cahp-sim: PHASE0
 	cp build/cahp-sim/src/cahp-sim build/bin/
 
 build/core: PHASE0
-	rsync -a --delete cahp-diamond/ build/core/
+	rsync -a --delete cahp-emerald/ build/core/
 	cd build/core && sbt run
 
 build/Iyokan-L1: PHASE0
@@ -52,18 +53,8 @@ build/core/vsp-core-no-ram-rom.json: build/core PHASE0
 	cd build/core && \
 		yosys build-no-ram-rom.ys
 
-build/core/vsp-core-no-rom.json: build/core PHASE0
-	cd build/core && \
-		yosys build-no-rom.ys
-
-build/share/kvsp/vsp-core.json: build/core/vsp-core-no-rom.json build/Iyokan-L1 PHASE0
-	dotnet run -p build/Iyokan-L1/ -i $< -o $@ --with-rom
-
-build/share/kvsp/vsp-core-wo-rom.json: build/core/vsp-core-no-rom.json build/Iyokan-L1 PHASE0
-	dotnet run -p build/Iyokan-L1/ -i $< -o $@
-
-build/share/kvsp/vsp-core-wo-ram-rom.json: build/core/vsp-core-no-ram-rom.json build/Iyokan-L1 PHASE0
-	dotnet run -p build/Iyokan-L1/ -i $< -o $@
+build/share/kvsp/emerald-core.json: build/core/vsp-core-no-ram-rom.json build/Iyokan-L1 PHASE0
+	dotnet run -p build/Iyokan-L1/ $< $@
 
 build/llvm-cahp: PHASE1
 	mkdir -p build/llvm-cahp
@@ -91,9 +82,7 @@ PHASE1: \
 	build/cahp-sim \
 	build/iyokan \
 	build/kvsp \
-	build/share/kvsp/vsp-core.json \
-	build/share/kvsp/vsp-core-wo-rom.json \
-	build/share/kvsp/vsp-core-wo-ram-rom.json
+	build/share/kvsp/emerald-core.json
 
 PHASE2: \
 	build/llvm-cahp \
