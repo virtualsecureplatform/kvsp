@@ -65,14 +65,10 @@ func getPathOf(name string) (string, error) {
 			path = "clang"
 		case "IYOKAN":
 			path = "iyokan"
+		case "IYOKAN-BLUEPRINT":
+			path = "../share/kvsp/cahp-emerald.toml"
 		case "KVSP-PACKET":
 			path = "kvsp-packet"
-		case "VSPCORE":
-			path = "../share/kvsp/vsp-core.json"
-		case "VSPCORE-WO-RAM-ROM":
-			path = "../share/kvsp/vsp-core-wo-ram-rom.json"
-		case "VSPCORE-WO-ROM":
-			path = "../share/kvsp/vsp-core-wo-rom.json"
 		default:
 			return "", errors.New("Invalid name")
 		}
@@ -109,17 +105,6 @@ func execCmd(name string, args []string) error {
 	return cmd.Run()
 }
 
-func writePlainPacket(inputFileName, outputFileName string) error {
-	// Get the path of kvsp-packet
-	path, err := getPathOf("KVSP-PACKET")
-	if err != nil {
-		return err
-	}
-
-	// Run
-	return execCmd(path, []string{"plain", inputFileName, outputFileName})
-}
-
 func runKVSPPacket(args ...string) error {
 	// Get the path of kvsp-packet
 	path, err := getPathOf("KVSP-PACKET")
@@ -131,37 +116,17 @@ func runKVSPPacket(args ...string) error {
 	return execCmd(path, args)
 }
 
-func runIyokan(enableRAM, enableROM bool, args ...string) error {
-	// Get the path of iyokan.
+func runIyokan(args ...string) error {
 	iyokanPath, err := getPathOf("IYOKAN")
 	if err != nil {
 		return err
 	}
 
-	if enableRAM {
-		args = append(args, "--enable-ram")
-	}
-	if enableROM {
-		args = append(args, "--enable-rom", "io_romAddr:7:io_romData:32")
-	}
-
-	pathVSPCore := ""
-	if enableRAM && enableROM {
-		pathVSPCore, err = getPathOf("VSPCORE-WO-RAM-ROM")
-	}
-	if !enableRAM && enableROM {
-		pathVSPCore, err = getPathOf("VSPCORE-WO-ROM")
-	}
-	if !enableRAM && !enableROM {
-		pathVSPCore, err = getPathOf("VSPCORE")
-	}
+	blueprintPath, err := getPathOf("IYOKAN-BLUEPRINT")
 	if err != nil {
 		return err
 	}
-	if pathVSPCore == "" {
-		return errors.New("Invalid spec of RAM and ROM")
-	}
-	args = append(args, "-l", pathVSPCore)
+	args = append(args, "--blueprint", blueprintPath)
 
 	// Run iyokan
 	return execCmd(iyokanPath, args)
@@ -181,7 +146,8 @@ func doCC() error {
 	}
 
 	// Run
-	return execCmd(path, append(os.Args[2:], "-target", "cahp", "-Oz", "--sysroot", cahpRtPath))
+	return execCmd(path, append(os.Args[2:],
+		"-target", "cahp", "-mcpu=emerald", "-Oz", "--sysroot", cahpRtPath))
 }
 
 func doDebug() error {
@@ -201,19 +167,33 @@ func doEmu() error {
 		return errors.New("File not found")
 	}
 
-	// Write the packet to a temporary file.
 	reqTmpFile, err := ioutil.TempFile("", "")
 	if err != nil {
 		return err
 	}
 	defer os.Remove(reqTmpFile.Name())
-	err = writePlainPacket(fileName, reqTmpFile.Name())
+	resTmpFile, err := ioutil.TempFile("", "")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(resTmpFile.Name())
+
+	err = runKVSPPacket("plain-pack", fileName, reqTmpFile.Name())
 	if err != nil {
 		return err
 	}
 
-	// Run iyokan to get emulation result.
-	return runIyokan(true, true, "plain", "-i", reqTmpFile.Name())
+	err = runIyokan("plain", "-i", reqTmpFile.Name(), "-o", resTmpFile.Name())
+	if err != nil {
+		return err
+	}
+
+	err = runKVSPPacket("plain-unpack", resTmpFile.Name())
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func doDec() error {
@@ -274,7 +254,7 @@ func doGenkey() error {
 
 func doPlainpacket() error {
 	// Parse command-line arguments.
-	fs := flag.NewFlagSet("enc", flag.ExitOnError)
+	fs := flag.NewFlagSet("plainpacket", flag.ExitOnError)
 	var (
 		inputFileName  = fs.String("i", "", "Input file name (plain)")
 		outputFileName = fs.String("o", "", "Output file name (encrypted)")
@@ -287,7 +267,7 @@ func doPlainpacket() error {
 		return errors.New("Specify -i, and -o options properly")
 	}
 
-	return runKVSPPacket("plain", *inputFileName, *outputFileName)
+	return runKVSPPacket("plain-pack", *inputFileName, *outputFileName)
 }
 
 func doRun() error {
@@ -298,7 +278,6 @@ func doRun() error {
 		inputFileName  = fs.String("i", "", "Input file name (encrypted)")
 		outputFileName = fs.String("o", "", "Output file name (encrypted)")
 		isGPU          = fs.Bool("g", false, "")
-		nWorkers       = fs.Uint("t", 0, "Number of workers")
 	)
 	err := fs.Parse(os.Args[2:])
 	if err != nil {
@@ -314,15 +293,10 @@ func doRun() error {
 		"-o", *outputFileName,
 		"-c", fmt.Sprint(*nClocks),
 	}
-	if *nWorkers > 0 {
-		args = append(args, "-t", fmt.Sprint(*nWorkers))
-	}
 	if *isGPU {
 		args = append(args, "--enable-gpu")
-		return runIyokan(true, true, args...)
-	} else {
-		return runIyokan(true, true, args...)
 	}
+	return runIyokan(args...)
 }
 
 func printUsageAndExit() {
