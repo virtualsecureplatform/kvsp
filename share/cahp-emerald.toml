@@ -27,14 +27,14 @@ out_rdata_width = 8
 "rom/addr[0:5]"         = "core/io_romAddr[0:5]"
 "core/io_romData[0:63]" = "rom/rdata[0:63]"
 
-"ramA/wren"             = "core/io_memA_in_writeEnable"
-"ramA/addr[0:7]"        = "core/io_memA_in_address[0:7]"
-"ramA/wdata[0:7]"       = "core/io_memA_in_in[0:7]"
+"ramA/wren"             = "core/io_memA_writeEnable"
+"ramA/addr[0:7]"        = "core/io_memA_address[0:7]"
+"ramA/wdata[0:7]"       = "core/io_memA_in[0:7]"
 "core/io_memA_out[0:7]" = "ramA/rdata[0:7]"
 
-"ramB/wren"             = "core/io_memB_in_writeEnable"
-"ramB/addr[0:7]"        = "core/io_memB_in_address[0:7]"
-"ramB/wdata[0:7]"       = "core/io_memB_in_in[0:7]"
+"ramB/wren"             = "core/io_memB_writeEnable"
+"ramB/addr[0:7]"        = "core/io_memB_address[0:7]"
+"ramB/wdata[0:7]"       = "core/io_memB_in[0:7]"
 "core/io_memB_out[0:7]" = "ramB/rdata[0:7]"
 
 "core/reset" = "@reset"
