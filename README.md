@@ -21,7 +21,7 @@ It may be time-consuming, but not so hard.)
 ```
 $ wget 'https://github.com/virtualsecureplatform/kvsp/releases/latest/download/kvsp.tar.gz'
 $ tar xf kvsp.tar.gz
-$ cd kvsp_v9/bin    # The directory's name depends on the file you download.
+$ cd kvsp_v10/bin    # The directory's name depends on the file you download.
 ```
 
 Write some C code...
@@ -59,15 +59,17 @@ without encryption.
 
 ```
 $ ./kvsp emu fib
-#1	done. (1001 us)
-#2	done. (903 us)
-
-...
-
-#12	done. (827 us)
-#13	done. (832 us)
+#1      done. (1759 us)
+#2      done. (1365 us)
+#3      done. (1390 us)
+#4      done. (1417 us)
+#5      done. (1423 us)
+#6      done. (1407 us)
+#7      done. (1421 us)
+#8      done. (1449 us)
+#9      done. (1416 us)
 break.
-#cycle  13
+#cycle  9
 
 ...
 
@@ -77,7 +79,7 @@ x8  5
 ```
 
 We can see `x8  5` here, so the program above seems correct.
-Also we now know it takes 13 clocks by `#cycle  13`.
+Also we now know it takes 9 clocks by `#cycle  9`.
 
 Now we will run the same program with encryption.
 
@@ -93,19 +95,21 @@ Encrypt `fib` with `secret.key` to get an encrypted executable file (`fib.enc`).
 $ ./kvsp enc -k secret.key -i fib -o fib.enc
 ```
 
-Run `fib.enc` for 13 clocks to get an encrypted result (`result.enc`).
+Run `fib.enc` for 9 clocks to get an encrypted result (`result.enc`).
 Notice that we DON'T need the secret key (`secret.key`) here,
 which means the encrypted program (`fib.enc`) runs without decryption!
 
 ```
-$ ./kvsp run -i fib.enc -o result.enc -c 13 ## Use -g option if you have GPUs.
-#1	done. (15726678 us)
-#2	done. (15948790 us)
-
-...
-
-#12	done. (15699488 us)
-#13	done. (16104918 us)
+$ ./kvsp run -i fib.enc -o result.enc -c 9 ## Use -g option if you have GPUs.
+#1      done. (15333972 us)
+#2      done. (23033477 us)
+#3      done. (26517776 us)
+#4      done. (26593093 us)
+#5      done. (26475888 us)
+#6      done. (26555916 us)
+#7      done. (26632725 us)
+#8      done. (26579704 us)
+#9      done. (26549935 us)
 ```
 
 Decrypt `result.enc` with `secret.key` to print the result.
