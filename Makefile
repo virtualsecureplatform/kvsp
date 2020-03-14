@@ -27,9 +27,9 @@ build/iyokan: PHASE0
 			-DCMAKE_BUILD_TYPE="Release" \
 			-DIYOKAN_ENABLE_CUDA=$(ENABLE_CUDA) \
 			../../Iyokan && \
-		make iyokan kvsp-packet
+		make iyokan iyokan-packet
 	cp build/iyokan/bin/iyokan build/bin/
-	cp build/iyokan/bin/kvsp-packet build/bin/
+	cp build/iyokan/bin/iyokan-packet build/bin/
 
 build/cahp-sim: PHASE0
 	mkdir -p build/cahp-sim
