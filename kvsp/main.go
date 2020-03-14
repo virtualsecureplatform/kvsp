@@ -338,6 +338,7 @@ func (pkt *plainPacket) print(w io.Writer) error {
 		}
 		fmt.Fprintf(w, "%02x ", pkt.Ram[addr])
 	}
+	fmt.Fprintf(w, "\n")
 
 	return nil
 }
