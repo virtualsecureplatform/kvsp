@@ -1,15 +1,19 @@
 package main
 
 import (
+	"debug/elf"
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/BurntSushi/toml"
 )
 
 var flagVerbose bool
@@ -67,8 +71,8 @@ func getPathOf(name string) (string, error) {
 			path = "iyokan"
 		case "IYOKAN-BLUEPRINT":
 			path = "../share/kvsp/cahp-emerald.toml"
-		case "KVSP-PACKET":
-			path = "kvsp-packet"
+		case "IYOKAN-PACKET":
+			path = "iyokan-packet"
 		default:
 			return "", errors.New("Invalid name")
 		}
@@ -89,7 +93,52 @@ func getPathOf(name string) (string, error) {
 	return path, nil
 }
 
-func execCmd(name string, args []string) error {
+// Parse the input as ELF and get ROM and RAM images.
+func parseELF(fileName string) ([]byte, []byte, []byte, error) {
+	input, err := elf.Open(fileName)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	rom := make([]byte, 512)
+	ram := make([]byte, 512)
+
+	for _, prog := range input.Progs {
+		addr := prog.ProgHeader.Vaddr
+		size := prog.ProgHeader.Filesz
+		if size == 0 {
+			continue
+		}
+
+		var mem []byte
+		if addr < 0x10000 { // ROM
+			mem = rom[addr : addr+size]
+		} else { // RAM
+			mem = ram[addr-0x10000 : addr-0x10000+size]
+		}
+
+		reader := prog.Open()
+		_, err := reader.Read(mem)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+	}
+
+	ramA := make([]byte, 256)
+	ramB := make([]byte, 256)
+
+	for i := 0; i < 512; i++ {
+		if i%2 == 1 {
+			ramA[i/2] = ram[i]
+		} else {
+			ramB[i/2] = ram[i]
+		}
+	}
+
+	return rom, ramA, ramB, nil
+}
+
+func execCmdImpl(name string, args []string) *exec.Cmd {
 	if flagVerbose {
 		fmtArgs := make([]string, len(args))
 		for i, arg := range args {
@@ -98,22 +147,31 @@ func execCmd(name string, args []string) error {
 		fmt.Fprintf(os.Stderr, "exec: '%s' %s\n", name, strings.Join(fmtArgs, " "))
 	}
 
-	cmd := exec.Command(name, args...)
+	return exec.Command(name, args...)
+}
+
+func execCmd(name string, args []string) error {
+	cmd := execCmdImpl(name, args)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
 }
 
-func runKVSPPacket(args ...string) error {
-	// Get the path of kvsp-packet
-	path, err := getPathOf("KVSP-PACKET")
+func outCmd(name string, args []string) (string, error) {
+	out, err := execCmdImpl(name, args).Output()
+	return string(out), err
+}
+
+func runIyokanPacket(args ...string) (string, error) {
+	// Get the path of iyokan-packet
+	path, err := getPathOf("IYOKAN-PACKET")
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	// Run
-	return execCmd(path, args)
+	return outCmd(path, args)
 }
 
 func runIyokan(args ...string) error {
@@ -130,6 +188,158 @@ func runIyokan(args ...string) error {
 
 	// Run iyokan
 	return execCmd(iyokanPath, args)
+}
+
+func packELF(inputFileName, outputFileName string) error {
+	if !fileExists(inputFileName) {
+		return errors.New("File not found")
+	}
+
+	rom, ramA, ramB, err := parseELF(inputFileName)
+	if err != nil {
+		return err
+	}
+
+	// Write ROM data
+	romTmpFile, err := ioutil.TempFile("", "")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(romTmpFile.Name())
+	_, err = romTmpFile.Write(rom)
+	if err != nil {
+		return err
+	}
+
+	// Write RAM A data
+	ramATmpFile, err := ioutil.TempFile("", "")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(ramATmpFile.Name())
+	_, err = ramATmpFile.Write(ramA)
+	if err != nil {
+		return err
+	}
+
+	// Write RAM B data
+	ramBTmpFile, err := ioutil.TempFile("", "")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(ramBTmpFile.Name())
+	_, err = ramBTmpFile.Write(ramB)
+	if err != nil {
+		return err
+	}
+
+	// Pack
+	_, err = runIyokanPacket("pack",
+		"--out", outputFileName,
+		"--rom", "rom:"+romTmpFile.Name(),
+		"--ram", "ramA:"+ramATmpFile.Name(),
+		"--ram", "ramB:"+ramBTmpFile.Name())
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+type plainPacketTOML struct {
+	NumCycles int                    `toml:"cycles"`
+	Ram       []plainPacketEntryTOML `toml:"ram"`
+	Bits      []plainPacketEntryTOML `toml:"bits"`
+}
+type plainPacketEntryTOML struct {
+	Name  string `toml:"name"`
+	Size  int    `toml:"size"`
+	Bytes []int  `toml:"bytes"`
+}
+type plainPacket struct {
+	NumCycles int
+	Flags     map[string]bool
+	Regs      map[string]int
+	Ram       []int
+}
+
+func (pkt *plainPacket) loadTOML(src string) error {
+	var pktTOML plainPacketTOML
+	if _, err := toml.Decode(src, &pktTOML); err != nil {
+		return err
+	}
+
+	pkt.NumCycles = pktTOML.NumCycles
+
+	// Load flags and registers
+	pkt.Flags = make(map[string]bool)
+	pkt.Regs = make(map[string]int)
+	for _, entry := range pktTOML.Bits {
+		if entry.Size == 1 { // flag
+			if entry.Bytes[0] != 0 {
+				pkt.Flags[entry.Name] = true
+			} else {
+				pkt.Flags[entry.Name] = false
+			}
+		} else if entry.Size == 16 { // register
+			pkt.Regs[entry.Name] = entry.Bytes[0] | (entry.Bytes[1] << 8)
+		} else {
+			return errors.New("Invalid TOML for result packet")
+		}
+	}
+
+	// Load ram
+	var ramA, ramB []int
+	for _, entry := range pktTOML.Ram {
+		if entry.Name == "ramA" {
+			ramA = entry.Bytes
+		} else if entry.Name == "ramB" {
+			ramB = entry.Bytes
+		} else {
+			return errors.New("Invalid TOML for result packet")
+		}
+	}
+	pkt.Ram = make([]int, 512)
+	for addr := range pkt.Ram {
+		if addr%2 == 1 {
+			pkt.Ram[addr] = ramA[addr/2]
+		} else {
+			pkt.Ram[addr] = ramB[addr/2]
+		}
+	}
+
+	// Check if the packet is correct
+	if _, ok := pkt.Flags["finflag"]; !ok {
+		return errors.New("Invalid TOML for result packet: 'finflag' not found")
+	}
+	for i := 0; i < 16; i++ {
+		name := fmt.Sprintf("reg_x%d", i)
+		if _, ok := pkt.Regs[name]; !ok {
+			return errors.New("Invalid TOML for result packet: '" + name + "' not found")
+		}
+	}
+
+	return nil
+}
+func (pkt *plainPacket) print(w io.Writer) error {
+	fmt.Fprintf(w, "#cycle\t%d\n", pkt.NumCycles)
+	fmt.Fprintf(w, "\n")
+	fmt.Fprintf(w, "f0\t%t\n", pkt.Flags["finflag"])
+	fmt.Fprintf(w, "\n")
+	for i := 0; i < 16; i++ {
+		name := fmt.Sprintf("reg_x%d", i)
+		fmt.Fprintf(w, "x%d\t%d\n", i, pkt.Regs[name])
+	}
+	fmt.Fprintf(w, "\n")
+	fmt.Fprintf(w, "      \t 0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f")
+	for addr := 0; addr < 512; addr++ {
+		if addr%16 == 0 {
+			fmt.Fprintf(w, "\n%06x\t", addr)
+		}
+		fmt.Fprintf(w, "%02x ", pkt.Ram[addr])
+	}
+
+	return nil
 }
 
 func doCC() error {
@@ -162,36 +372,44 @@ func doDebug() error {
 }
 
 func doEmu() error {
-	fileName := os.Args[2]
-	if !fileExists(fileName) {
-		return errors.New("File not found")
-	}
-
-	reqTmpFile, err := ioutil.TempFile("", "")
+	// Create tmp file for packing
+	packedFile, err := ioutil.TempFile("", "")
 	if err != nil {
 		return err
 	}
-	defer os.Remove(reqTmpFile.Name())
+	defer os.Remove(packedFile.Name())
+
+	// Pack
+	err = packELF(os.Args[2], packedFile.Name())
+	if err != nil {
+		return err
+	}
+
+	// Create tmp file for the result
 	resTmpFile, err := ioutil.TempFile("", "")
 	if err != nil {
 		return err
 	}
 	defer os.Remove(resTmpFile.Name())
 
-	err = runKVSPPacket("plain-pack", fileName, reqTmpFile.Name())
+	// Run Iyokan in plain mode
+	err = runIyokan("plain", "-i", packedFile.Name(), "-o", resTmpFile.Name())
 	if err != nil {
 		return err
 	}
 
-	err = runIyokan("plain", "-i", reqTmpFile.Name(), "-o", resTmpFile.Name())
+	// Unpack the result
+	result, err := runIyokanPacket("unpack", "--in", resTmpFile.Name())
 	if err != nil {
 		return err
 	}
 
-	err = runKVSPPacket("plain-unpack", resTmpFile.Name())
-	if err != nil {
+	// Parse and print the result
+	var pkt plainPacket
+	if err := pkt.loadTOML(result); err != nil {
 		return err
 	}
+	pkt.print(os.Stdout)
 
 	return nil
 }
@@ -211,8 +429,33 @@ func doDec() error {
 		return errors.New("Specify -k and -i options properly")
 	}
 
-	// Run kvsp-packet
-	return runKVSPPacket("dec", *keyFileName, *inputFileName)
+	// Create tmp file for decryption
+	packedFile, err := ioutil.TempFile("", "")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(packedFile.Name())
+
+	// Decrypt
+	_, err = runIyokanPacket("dec",
+		"--key", *keyFileName,
+		"--in", *inputFileName,
+		"--out", packedFile.Name())
+
+	// Unpack
+	result, err := runIyokanPacket("unpack", "--in", packedFile.Name())
+	if err != nil {
+		return err
+	}
+
+	// Parse and print the result
+	var pkt plainPacket
+	if err := pkt.loadTOML(result); err != nil {
+		return err
+	}
+	pkt.print(os.Stdout)
+
+	return nil
 }
 
 func doEnc() error {
@@ -231,8 +474,25 @@ func doEnc() error {
 		return errors.New("Specify -k, -i, and -o options properly")
 	}
 
-	// Run kvsp-packet
-	return runKVSPPacket("enc", *keyFileName, *inputFileName, *outputFileName)
+	// Create tmp file for packing
+	packedFile, err := ioutil.TempFile("", "")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(packedFile.Name())
+
+	// Pack
+	err = packELF(*inputFileName, packedFile.Name())
+	if err != nil {
+		return err
+	}
+
+	// Encrypt
+	_, err = runIyokanPacket("enc",
+		"--key", *keyFileName,
+		"--in", packedFile.Name(),
+		"--out", *outputFileName)
+	return err
 }
 
 func doGenkey() error {
@@ -249,7 +509,10 @@ func doGenkey() error {
 		return errors.New("Specify -o options properly")
 	}
 
-	return runKVSPPacket("genkey", *outputFileName)
+	_, err = runIyokanPacket("genkey",
+		"--type", "tfhepp",
+		"--out", *outputFileName)
+	return err
 }
 
 func doPlainpacket() error {
@@ -267,7 +530,7 @@ func doPlainpacket() error {
 		return errors.New("Specify -i, and -o options properly")
 	}
 
-	return runKVSPPacket("plain-pack", *inputFileName, *outputFileName)
+	return packELF(*inputFileName, *outputFileName)
 }
 
 func doRun() error {
