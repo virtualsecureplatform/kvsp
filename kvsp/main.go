@@ -49,7 +49,7 @@ func getPathOf(name string) (string, error) {
 	relative := true
 
 	// Check if environment variable is set in KVSP_XXX.
-	if path = os.Getenv(fmt.Sprintf("KVSP_%s_PATH", name)); path != "" {
+	if path = os.Getenv("KVSP_" + strings.Replace(name, "-", "_", -1) + "_PATH"); path != "" {
 		relative = false
 	} else {
 		/*
