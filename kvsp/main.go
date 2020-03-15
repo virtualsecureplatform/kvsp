@@ -400,7 +400,7 @@ func doEmu() error {
 	}
 
 	// Unpack the result
-	result, err := runIyokanPacket("unpack", "--in", resTmpFile.Name())
+	result, err := runIyokanPacket("packet2toml", "--in", resTmpFile.Name())
 	if err != nil {
 		return err
 	}
@@ -444,7 +444,7 @@ func doDec() error {
 		"--out", packedFile.Name())
 
 	// Unpack
-	result, err := runIyokanPacket("unpack", "--in", packedFile.Name())
+	result, err := runIyokanPacket("packet2toml", "--in", packedFile.Name())
 	if err != nil {
 		return err
 	}
