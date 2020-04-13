@@ -27,6 +27,11 @@ func fatalExitWithMsg(format string, args ...interface{}) {
 	fatalExit(fmt.Errorf(format, args...))
 }
 
+func write16le(out []byte, val int) {
+	out[0] = byte(val & 0xff)
+	out[1] = byte((val >> 8) & 0xff)
+}
+
 func fileExists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
@@ -94,10 +99,10 @@ func getPathOf(name string) (string, error) {
 }
 
 // Parse the input as ELF and get ROM and RAM images.
-func parseELF(fileName string) ([]byte, []byte, []byte, error) {
+func parseELF(fileName string) ([]byte, []byte, error) {
 	input, err := elf.Open(fileName)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
 	rom := make([]byte, 512)
@@ -120,10 +125,60 @@ func parseELF(fileName string) ([]byte, []byte, []byte, error) {
 		reader := prog.Open()
 		_, err := reader.Read(mem)
 		if err != nil {
-			return nil, nil, nil, err
+			return nil, nil, err
 		}
 	}
 
+	return rom, ram, nil
+}
+
+func attachCommandLineOptions(ram []byte, cmdOptsSrc []string) error {
+	// N1548 5.1.2.2.1 2
+	// the string pointed to by argv[0]
+	// represents the program name; argv[0][0] shall be the null character if the
+	// program name is not available from the host environment.
+	cmdOpts := []string{""}
+	cmdOpts = append(cmdOpts, cmdOptsSrc...)
+	argc := len(cmdOpts)
+
+	// Slice for *argv.
+	sargv := []int{
+		// N1548 5.1.2.2.1 2
+		// argv[argc] shall be a null pointer.
+		0,
+	}
+
+	index := 512 - 2
+
+	// Set **argv to RAM
+	for i := len(cmdOpts) - 1; i >= 0; i-- {
+		opt := append([]byte(cmdOpts[i]), 0)
+		for j := len(opt) - 1; j >= 0; j-- {
+			index--
+			ram[index] = opt[j]
+		}
+		sargv = append(sargv, index)
+	}
+	// Align index
+	if index%2 == 1 {
+		index--
+	}
+	// Set *argv to RAM
+	for _, val := range sargv {
+		index -= 2
+		write16le(ram[index:index+2], val)
+	}
+	// Save argc in RAM
+	index -= 2
+	write16le(ram[index:index+2], argc)
+	// Save initial stack pointer in RAM
+	initSP := index
+	write16le(ram[512-2:512], initSP)
+
+	return nil
+}
+
+func splitRAM(ram []byte) ([]byte, []byte, error) {
 	ramA := make([]byte, 256)
 	ramB := make([]byte, 256)
 
@@ -135,7 +190,7 @@ func parseELF(fileName string) ([]byte, []byte, []byte, error) {
 		}
 	}
 
-	return rom, ramA, ramB, nil
+	return ramA, ramB, nil
 }
 
 func execCmdImpl(name string, args []string) *exec.Cmd {
@@ -190,12 +245,18 @@ func runIyokan(args ...string) error {
 	return execCmd(iyokanPath, args)
 }
 
-func packELF(inputFileName, outputFileName string) error {
+func packELF(inputFileName, outputFileName string, cmdOpts []string) error {
 	if !fileExists(inputFileName) {
 		return errors.New("File not found")
 	}
-
-	rom, ramA, ramB, err := parseELF(inputFileName)
+	rom, ram, err := parseELF(inputFileName)
+	if err != nil {
+		return err
+	}
+	if err = attachCommandLineOptions(ram, cmdOpts); err != nil {
+		return err
+	}
+	ramA, ramB, err := splitRAM(ram)
 	if err != nil {
 		return err
 	}
@@ -381,7 +442,7 @@ func doEmu() error {
 	defer os.Remove(packedFile.Name())
 
 	// Pack
-	err = packELF(os.Args[2], packedFile.Name())
+	err = packELF(os.Args[2], packedFile.Name(), os.Args[3:])
 	if err != nil {
 		return err
 	}
@@ -483,7 +544,7 @@ func doEnc() error {
 	defer os.Remove(packedFile.Name())
 
 	// Pack
-	err = packELF(*inputFileName, packedFile.Name())
+	err = packELF(*inputFileName, packedFile.Name(), fs.Args())
 	if err != nil {
 		return err
 	}
@@ -531,7 +592,7 @@ func doPlainpacket() error {
 		return errors.New("Specify -i, and -o options properly")
 	}
 
-	return packELF(*inputFileName, *outputFileName)
+	return packELF(*inputFileName, *outputFileName, fs.Args())
 }
 
 func doRun() error {
