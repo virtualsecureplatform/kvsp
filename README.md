@@ -100,7 +100,7 @@ Notice that we DON'T need the secret key (`secret.key`) here,
 which means the encrypted program (`fib.enc`) runs without decryption!
 
 ```
-$ ./kvsp run -i fib.enc -o result.enc -c 9 ## Use -g option if you have GPUs.
+$ ./kvsp run -i fib.enc -o result.enc -c 9 ## Use option `-g num_of_gpus` if you have GPUs.
 #1      done. (15333972 us)
 #2      done. (23033477 us)
 #3      done. (26517776 us)
