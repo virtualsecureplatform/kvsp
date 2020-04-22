@@ -602,7 +602,7 @@ func doRun() error {
 		nClocks        = fs.Uint("c", 0, "Number of clocks to run")
 		inputFileName  = fs.String("i", "", "Input file name (encrypted)")
 		outputFileName = fs.String("o", "", "Output file name (encrypted)")
-		isGPU          = fs.Bool("g", false, "")
+		numGPU          = fs.Uint("g", 0, "Number of GPUs (Unspecify or set 0 for CPU mode)")
 	)
 	err := fs.Parse(os.Args[2:])
 	if err != nil {
@@ -618,8 +618,8 @@ func doRun() error {
 		"-o", *outputFileName,
 		"-c", fmt.Sprint(*nClocks),
 	}
-	if *isGPU {
-		args = append(args, "--enable-gpu")
+	if *numGPU > 0 {
+		args = append(args,"--enable-gpu","--gpu_num",fmt.Sprint(*numGPU))
 	}
 	return runIyokan(args...)
 }
