@@ -44,14 +44,18 @@ build/core: PHASE0
 	rsync -a --delete cahp-emerald/ build/core/
 	cd build/core && sbt run
 
+build/yosys: PHASE0
+	rsync -a --delete yosys build/
+	cd build/yosys && $(MAKE) ABCREV=default
+
 build/Iyokan-L1: PHASE0
 	cp -r Iyokan-L1 build/
 	cd build/Iyokan-L1 && \
 		dotnet build
 
-build/core/vsp-core-no-ram-rom.json: build/core PHASE0
+build/core/vsp-core-no-ram-rom.json: build/core build/yosys PHASE0
 	cd build/core && \
-		yosys build-no-ram-rom.ys
+		../yosys/yosys build-no-ram-rom.ys
 
 build/share/kvsp/emerald-core.json: build/core/vsp-core-no-ram-rom.json build/Iyokan-L1 PHASE0
 	dotnet run -p build/Iyokan-L1/ $< $@
