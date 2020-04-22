@@ -47,7 +47,7 @@ build/core:
 
 build/yosys:
 	rsync -a --delete yosys build/
-	cd build/yosys && $(MAKE) ABCREV=default
+	cd build/yosys && $(MAKE)
 
 build/Iyokan-L1:
 	cp -r Iyokan-L1 build/
