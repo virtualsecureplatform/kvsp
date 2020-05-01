@@ -1,0 +1,58 @@
+[[file]]
+type = "iyokanl1-json"
+path = "diamond-core.json"
+name = "core"
+
+[[builtin]]
+type = "rom"
+name = "rom"
+in_addr_width = 7
+out_rdata_width = 32
+
+[[builtin]]
+type = "ram"
+name = "ramA"
+in_addr_width = 8
+in_wdata_width = 8
+out_rdata_width = 8
+
+[[builtin]]
+type = "ram"
+name = "ramB"
+in_addr_width = 8
+in_wdata_width = 8
+out_rdata_width = 8
+
+[connect]
+"rom/addr[0:6]"         = "core/io_romAddr[0:6]"
+"core/io_romData[0:31]" = "rom/rdata[0:31]"
+
+"ramA/wren"             = "core/io_memA_writeEnable"
+"ramA/addr[0:7]"        = "core/io_memA_address[0:7]"
+"ramA/wdata[0:7]"       = "core/io_memA_in[0:7]"
+"core/io_memA_out[0:7]" = "ramA/rdata[0:7]"
+
+"ramB/wren"             = "core/io_memB_writeEnable"
+"ramB/addr[0:7]"        = "core/io_memB_address[0:7]"
+"ramB/wdata[0:7]"       = "core/io_memB_in[0:7]"
+"core/io_memB_out[0:7]" = "ramB/rdata[0:7]"
+
+"core/reset" = "@reset"
+"@finflag" = "core/io_finishFlag"
+
+"@reg_x0[0:15]" = "core/io_regOut_x0[0:15]"
+"@reg_x1[0:15]" = "core/io_regOut_x1[0:15]"
+"@reg_x2[0:15]" = "core/io_regOut_x2[0:15]"
+"@reg_x3[0:15]" = "core/io_regOut_x3[0:15]"
+"@reg_x4[0:15]" = "core/io_regOut_x4[0:15]"
+"@reg_x5[0:15]" = "core/io_regOut_x5[0:15]"
+"@reg_x6[0:15]" = "core/io_regOut_x6[0:15]"
+"@reg_x7[0:15]" = "core/io_regOut_x7[0:15]"
+"@reg_x8[0:15]" = "core/io_regOut_x8[0:15]"
+"@reg_x9[0:15]" = "core/io_regOut_x9[0:15]"
+"@reg_x10[0:15]" = "core/io_regOut_x10[0:15]"
+"@reg_x11[0:15]" = "core/io_regOut_x11[0:15]"
+"@reg_x12[0:15]" = "core/io_regOut_x12[0:15]"
+"@reg_x13[0:15]" = "core/io_regOut_x13[0:15]"
+"@reg_x14[0:15]" = "core/io_regOut_x14[0:15]"
+"@reg_x15[0:15]" = "core/io_regOut_x15[0:15]"

@@ -7,6 +7,7 @@ all: prepare \
 	 build/cahp-sim \
 	 build/iyokan \
 	 build/kvsp \
+	 build/share/kvsp/diamond-core.json \
 	 build/share/kvsp/emerald-core.json \
 	 build/llvm-cahp \
 	 build/cahp-rt
@@ -41,9 +42,13 @@ build/cahp-sim:
 		$(MAKE) cahp-sim
 	cp build/cahp-sim/src/cahp-sim build/bin/
 
-build/core:
-	rsync -a --delete cahp-emerald/ build/core/
-	cd build/core && sbt run
+build/cahp-diamond:
+	rsync -a --delete cahp-diamond/ build/cahp-diamond/
+	cd build/cahp-diamond && sbt run
+
+build/cahp-emerald:
+	rsync -a --delete cahp-emerald/ build/cahp-emerald/
+	cd build/cahp-emerald && sbt run
 
 build/yosys:
 	rsync -a --delete yosys build/
@@ -52,11 +57,18 @@ build/yosys:
 build/Iyokan-L1:
 	cp -r Iyokan-L1 build/
 
-build/core/vsp-core-no-ram-rom.json: build/core build/yosys
-	cd build/core && \
+build/cahp-diamond/vsp-core-no-ram-rom.json: build/cahp-diamond build/yosys
+	cd build/cahp-diamond && \
 		../yosys/yosys build-no-ram-rom.ys
 
-build/share/kvsp/emerald-core.json: build/core/vsp-core-no-ram-rom.json build/Iyokan-L1
+build/cahp-emerald/vsp-core-no-ram-rom.json: build/cahp-emerald build/yosys
+	cd build/cahp-emerald && \
+		../yosys/yosys build-no-ram-rom.ys
+
+build/share/kvsp/diamond-core.json: build/cahp-diamond/vsp-core-no-ram-rom.json build/Iyokan-L1
+	dotnet run -p build/Iyokan-L1/ -c Release $< $@
+
+build/share/kvsp/emerald-core.json: build/cahp-emerald/vsp-core-no-ram-rom.json build/Iyokan-L1
 	dotnet run -p build/Iyokan-L1/ -c Release $< $@
 
 build/llvm-cahp:

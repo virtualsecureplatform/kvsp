@@ -74,7 +74,9 @@ func getPathOf(name string) (string, error) {
 			path = "clang"
 		case "IYOKAN":
 			path = "iyokan"
-		case "IYOKAN-BLUEPRINT":
+		case "IYOKAN-BLUEPRINT-DIAMOND":
+			path = "../share/kvsp/cahp-diamond.toml"
+		case "IYOKAN-BLUEPRINT-EMERALD":
 			path = "../share/kvsp/cahp-emerald.toml"
 		case "IYOKAN-PACKET":
 			path = "iyokan-packet"
@@ -234,12 +236,6 @@ func runIyokan(args ...string) error {
 	if err != nil {
 		return err
 	}
-
-	blueprintPath, err := getPathOf("IYOKAN-BLUEPRINT")
-	if err != nil {
-		return err
-	}
-	args = append(args, "--blueprint", blueprintPath)
 
 	// Run iyokan
 	return execCmd(iyokanPath, args)
@@ -434,6 +430,13 @@ func doDebug() error {
 }
 
 func doEmu() error {
+	// Parse command-line arguments.
+	fs := flag.NewFlagSet("emu", flag.ExitOnError)
+	var (
+		whichCAHPCPU = fs.String("cahp-cpu", "emerald", "Which CAHP CPU you use, emerald or diamond")
+	)
+	err := fs.Parse(os.Args[2:])
+
 	// Create tmp file for packing
 	packedFile, err := ioutil.TempFile("", "")
 	if err != nil {
@@ -442,7 +445,7 @@ func doEmu() error {
 	defer os.Remove(packedFile.Name())
 
 	// Pack
-	err = packELF(os.Args[2], packedFile.Name(), os.Args[3:])
+	err = packELF(fs.Args()[0], packedFile.Name(), fs.Args()[1:])
 	if err != nil {
 		return err
 	}
@@ -455,7 +458,11 @@ func doEmu() error {
 	defer os.Remove(resTmpFile.Name())
 
 	// Run Iyokan in plain mode
-	err = runIyokan("plain", "-i", packedFile.Name(), "-o", resTmpFile.Name())
+	blueprint, err := getPathOf(fmt.Sprintf("IYOKAN-BLUEPRINT-%s", strings.ToUpper(*whichCAHPCPU)))
+	if err != nil {
+		return err
+	}
+	err = runIyokan("plain", "-i", packedFile.Name(), "-o", resTmpFile.Name(), "--blueprint", blueprint)
 	if err != nil {
 		return err
 	}
@@ -602,7 +609,8 @@ func doRun() error {
 		nClocks        = fs.Uint("c", 0, "Number of clocks to run")
 		inputFileName  = fs.String("i", "", "Input file name (encrypted)")
 		outputFileName = fs.String("o", "", "Output file name (encrypted)")
-		numGPU          = fs.Uint("g", 0, "Number of GPUs (Unspecify or set 0 for CPU mode)")
+		numGPU         = fs.Uint("g", 0, "Number of GPUs (Unspecify or set 0 for CPU mode)")
+		whichCAHPCPU   = fs.String("cahp-cpu", "emerald", "Which CAHP CPU you use, emerald or diamond")
 	)
 	err := fs.Parse(os.Args[2:])
 	if err != nil {
@@ -612,14 +620,20 @@ func doRun() error {
 		return errors.New("Specify -c, -i, and -o options properly")
 	}
 
+	blueprint, err := getPathOf(fmt.Sprintf("IYOKAN-BLUEPRINT-%s", strings.ToUpper(*whichCAHPCPU)))
+	if err != nil {
+		return err
+	}
+
 	args := []string{
 		"tfhe",
 		"-i", *inputFileName,
 		"-o", *outputFileName,
 		"-c", fmt.Sprint(*nClocks),
+		"--blueprint", blueprint,
 	}
 	if *numGPU > 0 {
-		args = append(args,"--enable-gpu","--gpu_num",fmt.Sprint(*numGPU))
+		args = append(args, "--enable-gpu", "--gpu_num", fmt.Sprint(*numGPU))
 	}
 	return runIyokan(args...)
 }
