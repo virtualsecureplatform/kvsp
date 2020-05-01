@@ -639,6 +639,30 @@ func doRun() error {
 	return runIyokan(args...)
 }
 
+var kvspVersion = "unk"
+var kvspRevision = "unk"
+var iyokanRevision = "unk"
+var iyokanL1Revision = "unk"
+var cahpDiamondRevision = "unk"
+var cahpEmeraldRevision = "unk"
+var cahpRtRevision = "unk"
+var cahpSimRevision = "unk"
+var llvmCahpRevision = "unk"
+var yosysRevision = "unk"
+
+func doVersion() error {
+	fmt.Printf("KVSP %s\t(rev %s)\n", kvspVersion, kvspRevision)
+	fmt.Printf("- Iyokan\t(rev %s)\n", iyokanRevision)
+	fmt.Printf("- Iyokan-L1\t(rev %s)\n", iyokanL1Revision)
+	fmt.Printf("- cahp-diamond\t(rev %s)\n", cahpDiamondRevision)
+	fmt.Printf("- cahp-emerald\t(rev %s)\n", cahpEmeraldRevision)
+	fmt.Printf("- cahp-rt\t(rev %s)\n", cahpRtRevision)
+	fmt.Printf("- cahp-sim\t(rev %s)\n", cahpSimRevision)
+	fmt.Printf("- llvm-cahp\t(rev %s)\n", llvmCahpRevision)
+	fmt.Printf("- Yosys\t(rev %s)\n", yosysRevision)
+	return nil
+}
+
 func printUsageAndExit() {
 	fatalExitWithMsg(`
 Usage:
@@ -679,6 +703,8 @@ func main() {
 		err = doPlainpacket()
 	case "run":
 		err = doRun()
+	case "version":
+		err = doVersion()
 	default:
 		printUsageAndExit()
 	}
