@@ -414,8 +414,9 @@ func doCC() error {
 	}
 
 	// Run
-	return execCmd(path, append(os.Args[2:],
-		"-target", "cahp", "-mcpu=emerald", "-Oz", "--sysroot", cahpRtPath))
+	args := []string{"-target", "cahp", "-mcpu=emerald", "-Oz", "--sysroot", cahpRtPath}
+	args = append(args, os.Args[2:]...)
+	return execCmd(path, args)
 }
 
 func doDebug() error {
