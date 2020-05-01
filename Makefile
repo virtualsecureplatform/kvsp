@@ -72,7 +72,10 @@ build/cahp-diamond/vsp-core-no-ram-rom.json: build/cahp-diamond build/yosys
 	cd build/cahp-diamond && \
 		../yosys/yosys build-no-ram-rom.ys
 
-build/cahp-emerald/vsp-core-no-ram-rom.json: build/cahp-emerald build/yosys
+# NOTE: build/cahp-diamond/vsp-core-no-ram-rom.json is "fake" dependency;
+# Without this the builds for Diamond and Emerald will run in parallel
+# to consume too much memory.
+build/cahp-emerald/vsp-core-no-ram-rom.json: build/cahp-emerald build/yosys build/cahp-diamond/vsp-core-no-ram-rom.json
 	cd build/cahp-emerald && \
 		../yosys/yosys build-no-ram-rom.ys
 
