@@ -5,7 +5,7 @@ ENABLE_CUDA=0
 
 all: prepare \
 	 build/cahp-sim \
-	 build/iyokan \
+	 build/Iyokan \
 	 build/kvsp \
 	 build/share/kvsp/diamond-core.json \
 	 build/share/kvsp/emerald-core.json \
@@ -33,16 +33,16 @@ build/kvsp:
 			-X main.yosysRevision=$$(git -C ../yosys rev-parse --short HEAD)"
 	cp build/kvsp/kvsp build/bin/
 
-build/iyokan:
-	mkdir -p build/iyokan
-	cd build/iyokan && \
+build/Iyokan:
+	mkdir -p build/Iyokan
+	cd build/Iyokan && \
 		cmake \
 			-DCMAKE_BUILD_TYPE="Release" \
 			-DIYOKAN_ENABLE_CUDA=$(ENABLE_CUDA) \
 			../../Iyokan && \
 		$(MAKE) iyokan iyokan-packet
-	cp build/iyokan/bin/iyokan build/bin/
-	cp build/iyokan/bin/iyokan-packet build/bin/
+	cp build/Iyokan/bin/iyokan build/bin/
+	cp build/Iyokan/bin/iyokan-packet build/bin/
 
 build/cahp-sim:
 	mkdir -p build/cahp-sim
