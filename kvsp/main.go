@@ -585,6 +585,28 @@ func doGenkey() error {
 	return err
 }
 
+func doGenbkey() error {
+	// Parse command-line arguments.
+	fs := flag.NewFlagSet("genbkey", flag.ExitOnError)
+	var (
+		inputFileName  = fs.String("i", "", "Input file name (secret key)")
+		outputFileName = fs.String("o", "", "Output file name (bootstrapping key)")
+	)
+	err := fs.Parse(os.Args[2:])
+	if err != nil {
+		return err
+	}
+	if *inputFileName == "" || *outputFileName == "" {
+		return errors.New("Specify -i and -o options properly")
+	}
+
+	_, err = runIyokanPacket("genbkey",
+		"--in", *inputFileName,
+		"--out", *outputFileName)
+
+	return err
+}
+
 func doPlainpacket() error {
 	// Parse command-line arguments.
 	fs := flag.NewFlagSet("plainpacket", flag.ExitOnError)
@@ -699,6 +721,8 @@ func main() {
 		err = doEnc()
 	case "genkey":
 		err = doGenkey()
+	case "genbkey":
+		err = doGenbkey()
 	case "plainpacket":
 		err = doPlainpacket()
 	case "run":
