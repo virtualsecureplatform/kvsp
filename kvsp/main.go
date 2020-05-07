@@ -532,7 +532,8 @@ func doEnc() error {
 	// Parse command-line arguments.
 	fs := flag.NewFlagSet("enc", flag.ExitOnError)
 	var (
-		keyFileName    = fs.String("k", "", "Key file name")
+		keyFileName    = fs.String("k", "", "Secret key file name")
+		bkeyFileName   = fs.String("bkey", "", "Bootstrapping key file name")
 		inputFileName  = fs.String("i", "", "Input file name (plain)")
 		outputFileName = fs.String("o", "", "Output file name (encrypted)")
 	)
@@ -557,9 +558,28 @@ func doEnc() error {
 		return err
 	}
 
+	// Generate bootstrapping key if not exist
+	if *bkeyFileName == "" {
+		bkeyFile, err := ioutil.TempFile("", "")
+		if err != nil {
+			return err
+		}
+		defer os.Remove(bkeyFile.Name())
+
+		*bkeyFileName = bkeyFile.Name()
+
+		_, err = runIyokanPacket("genbkey",
+			"--in", *keyFileName,
+			"--out", *bkeyFileName)
+		if err != nil {
+			return err
+		}
+	}
+
 	// Encrypt
 	_, err = runIyokanPacket("enc",
 		"--key", *keyFileName,
+		"--bkey", *bkeyFileName,
 		"--in", packedFile.Name(),
 		"--out", *outputFileName)
 	return err
