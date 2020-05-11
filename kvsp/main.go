@@ -204,14 +204,15 @@ func execCmdImpl(name string, args []string) *exec.Cmd {
 		fmt.Fprintf(os.Stderr, "exec: '%s' %s\n", name, strings.Join(fmtArgs, " "))
 	}
 
-	return exec.Command(name, args...)
+	cmd := exec.Command(name, args...)
+	cmd.Stderr = os.Stderr
+	return cmd
 }
 
 func execCmd(name string, args []string) error {
 	cmd := execCmdImpl(name, args)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
 	return cmd.Run()
 }
 
