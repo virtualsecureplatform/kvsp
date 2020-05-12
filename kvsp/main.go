@@ -18,6 +18,19 @@ import (
 
 var flagVerbose bool
 
+// Flag for a list of values
+// Thanks to: https://stackoverflow.com/a/28323276
+type arrayFlags []string
+
+func (i *arrayFlags) String() string {
+	return "my string representation"
+}
+
+func (i *arrayFlags) Set(value string) error {
+	*i = append(*i, value)
+	return nil
+}
+
 func fatalExit(err error) {
 	log.Fatal(err)
 	os.Exit(1)
@@ -232,13 +245,14 @@ func runIyokanPacket(args ...string) (string, error) {
 	return outCmd(path, args)
 }
 
-func runIyokan(args ...string) error {
+func runIyokan(args0 []string, args1 []string) error {
 	iyokanPath, err := getPathOf("IYOKAN")
 	if err != nil {
 		return err
 	}
 
 	// Run iyokan
+	args := append(args0, args1...)
 	return execCmd(iyokanPath, args)
 }
 
@@ -436,7 +450,9 @@ func doEmu() error {
 	fs := flag.NewFlagSet("emu", flag.ExitOnError)
 	var (
 		whichCAHPCPU = fs.String("cahp-cpu", "emerald", "Which CAHP CPU you use, emerald or diamond")
+		iyokanArgs   arrayFlags
 	)
+	fs.Var(&iyokanArgs, "iyokan-args", "Raw arguments for Iyokan")
 	err := fs.Parse(os.Args[2:])
 
 	// Create tmp file for packing
@@ -464,7 +480,7 @@ func doEmu() error {
 	if err != nil {
 		return err
 	}
-	err = runIyokan("plain", "-i", packedFile.Name(), "-o", resTmpFile.Name(), "--blueprint", blueprint)
+	err = runIyokan([]string{"plain", "-i", packedFile.Name(), "-o", resTmpFile.Name(), "--blueprint", blueprint}, iyokanArgs)
 	if err != nil {
 		return err
 	}
@@ -655,7 +671,9 @@ func doRun() error {
 		outputFileName = fs.String("o", "", "Output file name (encrypted)")
 		numGPU         = fs.Uint("g", 0, "Number of GPUs (Unspecify or set 0 for CPU mode)")
 		whichCAHPCPU   = fs.String("cahp-cpu", "emerald", "Which CAHP CPU you use, emerald or diamond")
+		iyokanArgs     arrayFlags
 	)
+	fs.Var(&iyokanArgs, "iyokan-args", "Raw arguments for Iyokan")
 	err := fs.Parse(os.Args[2:])
 	if err != nil {
 		return err
@@ -679,7 +697,7 @@ func doRun() error {
 	if *numGPU > 0 {
 		args = append(args, "--enable-gpu", "--gpu_num", fmt.Sprint(*numGPU))
 	}
-	return runIyokan(args...)
+	return runIyokan(args, iyokanArgs)
 }
 
 var kvspVersion = "unk"
