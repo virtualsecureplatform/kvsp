@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/BurntSushi/toml"
 )
@@ -550,7 +551,6 @@ func doEnc() error {
 	fs := flag.NewFlagSet("enc", flag.ExitOnError)
 	var (
 		keyFileName    = fs.String("k", "", "Secret key file name")
-		bkeyFileName   = fs.String("bkey", "", "Bootstrapping key file name")
 		inputFileName  = fs.String("i", "", "Input file name (plain)")
 		outputFileName = fs.String("o", "", "Output file name (encrypted)")
 	)
@@ -575,28 +575,9 @@ func doEnc() error {
 		return err
 	}
 
-	// Generate bootstrapping key if not exist
-	if *bkeyFileName == "" {
-		bkeyFile, err := ioutil.TempFile("", "")
-		if err != nil {
-			return err
-		}
-		defer os.Remove(bkeyFile.Name())
-
-		*bkeyFileName = bkeyFile.Name()
-
-		_, err = runIyokanPacket("genbkey",
-			"--in", *keyFileName,
-			"--out", *bkeyFileName)
-		if err != nil {
-			return err
-		}
-	}
-
 	// Encrypt
 	_, err = runIyokanPacket("enc",
 		"--key", *keyFileName,
-		"--bkey", *bkeyFileName,
 		"--in", packedFile.Name(),
 		"--out", *outputFileName)
 	return err
@@ -666,20 +647,23 @@ func doRun() error {
 	// Parse command-line arguments.
 	fs := flag.NewFlagSet("run", flag.ExitOnError)
 	var (
-		nClocks        = fs.Uint("c", 0, "Number of clocks to run")
-		inputFileName  = fs.String("i", "", "Input file name (encrypted)")
-		outputFileName = fs.String("o", "", "Output file name (encrypted)")
-		numGPU         = fs.Uint("g", 0, "Number of GPUs (Unspecify or set 0 for CPU mode)")
-		whichCAHPCPU   = fs.String("cahp-cpu", "emerald", "Which CAHP CPU you use, emerald or diamond")
-		iyokanArgs     arrayFlags
+		nClocks          = fs.Uint("c", 0, "Number of clocks to run")
+		bkeyFileName     = fs.String("bkey", "", "Bootstrapping key file name")
+		inputFileName    = fs.String("i", "", "Input file name (encrypted)")
+		outputFileName   = fs.String("o", "", "Output file name (encrypted)")
+		numGPU           = fs.Uint("g", 0, "Number of GPUs (Unspecify or set 0 for CPU mode)")
+		whichCAHPCPU     = fs.String("cahp-cpu", "emerald", "Which CAHP CPU you use, emerald or diamond")
+		snapshotFileName = fs.String("snapshot", "", "Snapshot file name to write in")
+		iyokanArgs       arrayFlags
 	)
 	fs.Var(&iyokanArgs, "iyokan-args", "Raw arguments for Iyokan")
 	err := fs.Parse(os.Args[2:])
 	if err != nil {
 		return err
 	}
-	if *nClocks == 0 || *inputFileName == "" || *outputFileName == "" {
-		return errors.New("Specify -c, -i, and -o options properly")
+
+	if *nClocks == 0 || *bkeyFileName == "" || *inputFileName == "" || *outputFileName == "" {
+		return errors.New("Specify -c, -bkey, -i, and -o options properly")
 	}
 
 	blueprint, err := getPathOf(fmt.Sprintf("IYOKAN-BLUEPRINT-%s", strings.ToUpper(*whichCAHPCPU)))
@@ -688,16 +672,70 @@ func doRun() error {
 	}
 
 	args := []string{
-		"tfhe",
 		"-i", *inputFileName,
-		"-o", *outputFileName,
-		"-c", fmt.Sprint(*nClocks),
 		"--blueprint", blueprint,
 	}
 	if *numGPU > 0 {
 		args = append(args, "--enable-gpu", "--gpu_num", fmt.Sprint(*numGPU))
 	}
-	return runIyokan(args, iyokanArgs)
+
+	return runIyokanTFHE(*nClocks, *bkeyFileName, *outputFileName, *snapshotFileName, args, iyokanArgs)
+}
+
+func doResume() error {
+	// Parse command-line arguments.
+	fs := flag.NewFlagSet("resume", flag.ExitOnError)
+	var (
+		nClocks          = fs.Uint("c", 0, "Number of clocks to run")
+		bkeyFileName     = fs.String("bkey", "", "Bootstrapping key file name")
+		inputFileName    = fs.String("i", "", "Snapshot file to resume from")
+		outputFileName   = fs.String("o", "", "Output file name (encrypted)")
+		snapshotFileName = fs.String("snapshot", "", "Snapshot file name to write in")
+		iyokanArgs       arrayFlags
+	)
+	fs.Var(&iyokanArgs, "iyokan-args", "Raw arguments for Iyokan")
+	err := fs.Parse(os.Args[2:])
+	if err != nil {
+		return err
+	}
+
+	if *nClocks == 0 || *bkeyFileName == "" || *inputFileName == "" || *outputFileName == "" {
+		return errors.New("Specify -c, -bkey, -i, and -o options properly")
+	}
+
+	args := []string{
+		"--resume", *inputFileName,
+	}
+	return runIyokanTFHE(*nClocks, *bkeyFileName, *outputFileName, *snapshotFileName, args, iyokanArgs)
+}
+
+func runIyokanTFHE(nClocks uint, bkeyFileName string, outputFileName string, snapshotFileName string, otherArgs0 []string, otherArgs1 []string) error {
+	var err error
+
+	if snapshotFileName == "" {
+		snapshotFileName = fmt.Sprintf(
+			"kvsp_%s.snapshot", time.Now().Format("20060102150405"))
+	}
+
+	args := []string{
+		"tfhe",
+		"--bkey", bkeyFileName,
+		"-o", outputFileName,
+		"-c", fmt.Sprint(nClocks),
+		"--snapshot", snapshotFileName,
+	}
+	args = append(args, otherArgs0...)
+	args = append(args, otherArgs1...)
+	if err = runIyokan(args, []string{}); err != nil {
+		return err
+	}
+
+	fmt.Printf("\n")
+	fmt.Printf("Snapshot was taken as file '%s'. You can resume the process like:\n", snapshotFileName)
+	fmt.Printf("\t$ %s resume -c %d -i %s -o %s -bkey %s\n",
+		os.Args[0], nClocks, snapshotFileName, outputFileName, bkeyFileName)
+
+	return nil
 }
 
 var kvspVersion = "unk"
@@ -765,6 +803,8 @@ func main() {
 		err = doGenbkey()
 	case "plainpacket":
 		err = doPlainpacket()
+	case "resume":
+		err = doResume()
 	case "run":
 		err = doRun()
 	case "version":
