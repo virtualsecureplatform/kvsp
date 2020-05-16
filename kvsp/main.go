@@ -32,15 +32,6 @@ func (i *arrayFlags) Set(value string) error {
 	return nil
 }
 
-func fatalExit(err error) {
-	log.Fatal(err)
-	os.Exit(1)
-}
-
-func fatalExitWithMsg(format string, args ...interface{}) {
-	fatalExit(fmt.Errorf(format, args...))
-}
-
 func write16le(out []byte, val int) {
 	out[0] = byte(val & 0xff)
 	out[1] = byte((val >> 8) & 0xff)
@@ -439,7 +430,7 @@ func doDebug() error {
 	// Get the path of cahp-sim
 	path, err := getPathOf("CAHP_SIM")
 	if err != nil {
-		fatalExit(err)
+		return err
 	}
 
 	// Run
@@ -762,27 +753,35 @@ func doVersion() error {
 	return nil
 }
 
-func printUsageAndExit() {
-	fatalExitWithMsg(`
-Usage:
-  kvsp cc  OPTIONS...
-  kvsp debug OPTIONS...
-  kvsp dec OPTIONS...
-  kvsp emu OPTIONS...
-  kvsp enc OPTIONS...
-  kvsp genkey OPTIONS...
-  kvsp genbkey OPTIONS...
-  kvsp run OPTIONS...
-`)
-}
-
 func main() {
 	if envvarVerbose := os.Getenv("KVSP_VERBOSE"); envvarVerbose == "1" {
 		flagVerbose = true
 	}
 
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, `Usage: %s COMMAND [OPTIONS]... ARGS...
+
+KVSP is the first virtual secure platform in the world, which makes your life better.
+
+Commands:
+	cc
+	debug
+	dec
+	emu
+	enc
+	genkey
+	genbkey
+	plainpacket
+	resume
+	run
+	version
+`, os.Args[0])
+		flag.PrintDefaults()
+	}
+
 	if len(os.Args) <= 1 {
-		printUsageAndExit()
+		flag.Usage()
+		os.Exit(1)
 	}
 
 	var err error
@@ -810,10 +809,12 @@ func main() {
 	case "version":
 		err = doVersion()
 	default:
-		printUsageAndExit()
+		flag.Usage()
+		os.Exit(1)
 	}
 
 	if err != nil {
-		fatalExit(err)
+		log.Fatal(err)
+		os.Exit(1)
 	}
 }
