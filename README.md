@@ -21,7 +21,7 @@ It may be time-consuming, but not so hard.)
 ```
 $ wget 'https://github.com/virtualsecureplatform/kvsp/releases/latest/download/kvsp.tar.gz'
 $ tar xf kvsp.tar.gz
-$ cd kvsp_v10/bin    # The directory's name depends on the file you download.
+$ cd kvsp_v18/bin    # The directory's name depends on the file you download.
 ```
 
 Write some C code...
@@ -40,89 +40,86 @@ static int fib(int n) {
   return a;
 }
 
-int main() {
-  // The result will be set in the register x8.
-  return fib(5);
+int main(int argc, char **argv) {
+  // Calculate n-th Fibonacci number.
+  // n is a 1-digit number and given as command-line argument.
+  return fib(argv[1][0] - '0');
 }
 ```
 
-...like so. This program (`fib.c`) computes the 5th term of the Fibonacci sequence, that is, 5.
+...like so. This program (`fib.c`) returns the n-th term of Fibonacci sequence,
+as its comment says.
 
-Compile the C code (`fib.c`) to an executable file (`fib`).
+Compile `fib.c` to an executable file `fib`.
 
 ```
 $ ./kvsp cc fib.c -o fib
 ```
 
-Let's check if the program is correct by emulator, which runs
-without encryption.
-
-```
-$ ./kvsp emu fib
-#1      done. (1759 us)
-#2      done. (1365 us)
-#3      done. (1390 us)
-#4      done. (1417 us)
-#5      done. (1423 us)
-#6      done. (1407 us)
-#7      done. (1421 us)
-#8      done. (1449 us)
-#9      done. (1416 us)
-break.
-#cycle  9
-
-...
-
-x8  5
-
-...
-```
-
-We can see `x8  5` here, so the program above seems correct.
-Also we now know it takes 9 clocks by `#cycle  9`.
-
-Now we will run the same program with encryption.
-
-Generate a secret key (`secret.key`).
+Let's encrypt it. First, we'll generate a secret key (`secret.key`):
 
 ```
 $ ./kvsp genkey -o secret.key
 ```
 
-Encrypt `fib` with `secret.key` to get an encrypted executable file (`fib.enc`).
+Then encrypt `fib` with `secret.key` to get an **encrypted** executable `fib.enc`.
+We have to pass its command-line arguments here. I chose 5, so the result
+of this program will be fib(5)=5.
 
 ```
-$ ./kvsp enc -k secret.key -i fib -o fib.enc
+$ ./kvsp enc -k secret.key -i fib -o fib.enc 5
 ```
 
-Run `fib.enc` for 9 clocks to get an encrypted result (`result.enc`).
-Notice that we DON'T need the secret key (`secret.key`) here,
-which means the encrypted program (`fib.enc`) runs without decryption!
+Okay. Now we will run `fib.enc` without `secret.key`.
+To do this, first we have to make a _bootstrapping key_, which doesn't reveal
+the secret key at all but only enables the computation:
 
 ```
-$ ./kvsp run -i fib.enc -o result.enc -c 9 ## Use option `-g num_of_gpus` if you have GPUs.
-#1      done. (15333972 us)
-#2      done. (23033477 us)
-#3      done. (26517776 us)
-#4      done. (26593093 us)
-#5      done. (26475888 us)
-#6      done. (26555916 us)
-#7      done. (26632725 us)
-#8      done. (26579704 us)
-#9      done. (26549935 us)
+$ ./kvsp genbkey -i secret.key -o bootstrapping.key
 ```
 
-Decrypt `result.enc` with `secret.key` to print the result.
+Then we will execute the program, but here is a problem:
+once it starts running we can't know if it is still running or has already halted,
+because **everything about the code is totally encrypted**!
+
+So, we have to decide how many clock cycles to run `fib.enc` at our choice.
+It is, say, 20.
+
+```
+# If you have GPUs use '-g NUM-OF-GPUS' option.
+$ ./kvsp run -bkey bootstrapping.key -i fib.enc -o result.enc -c 20
+```
+
+Let's check the result. We'll decrypt `result.enc`:
 
 ```
 $ ./kvsp dec -k secret.key -i result.enc
 ...
-
-x8  5
-
+f0      false
 ...
 ```
 
+`f0` is 'finish flag', which is true iff the program ends.
+So, 20 cycles were not enough. Let's try another 20;
+We can resume from the point where we stopped using 'snapshot' file
+(its filename depends on your environment):
+
+```
+$ ./kvsp resume -c 20 -i kvsp_20200517002413.snapshot -o result.enc -bkey bootstrapping.key
+```
+
+Check the result again:
+
+```
+$ ./kvsp dec -k secret.key -i result.enc
+...
+f0      true
+...
+x8      5
+...
+```
+
+Finished! x8 register has the returned value from `main()` and it is the correct answer 5.
 We could get the correct answer using secure computation!
 
 ## More examples?
