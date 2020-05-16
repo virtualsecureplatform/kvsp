@@ -95,7 +95,7 @@ build/llvm-cahp:
 			-DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD="CAHP" \
 			../../llvm-cahp/llvm && \
 		$(MAKE)
-	cp build/llvm-cahp/bin/* build/bin/
+	rsync -a build/llvm-cahp/bin/ build/bin/
 
 build/cahp-rt: build/llvm-cahp
 	cp -r cahp-rt build/
