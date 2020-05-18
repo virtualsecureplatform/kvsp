@@ -645,6 +645,7 @@ func doRun() error {
 		numGPU           = fs.Uint("g", 0, "Number of GPUs (Unspecify or set 0 for CPU mode)")
 		whichCAHPCPU     = fs.String("cahp-cpu", "emerald", "Which CAHP CPU you use, emerald or diamond")
 		snapshotFileName = fs.String("snapshot", "", "Snapshot file name to write in")
+		quiet            = fs.Bool("quiet", false, "Be quiet")
 		iyokanArgs       arrayFlags
 	)
 	fs.Var(&iyokanArgs, "iyokan-args", "Raw arguments for Iyokan")
@@ -670,7 +671,7 @@ func doRun() error {
 		args = append(args, "--enable-gpu", "--gpu_num", fmt.Sprint(*numGPU))
 	}
 
-	return runIyokanTFHE(*nClocks, *bkeyFileName, *outputFileName, *snapshotFileName, args, iyokanArgs)
+	return runIyokanTFHE(*nClocks, *bkeyFileName, *outputFileName, *snapshotFileName, *quiet, args, iyokanArgs)
 }
 
 func doResume() error {
@@ -682,6 +683,7 @@ func doResume() error {
 		inputFileName    = fs.String("i", "", "Snapshot file to resume from")
 		outputFileName   = fs.String("o", "", "Output file name (encrypted)")
 		snapshotFileName = fs.String("snapshot", "", "Snapshot file name to write in")
+		quiet            = fs.Bool("quiet", false, "Be quiet")
 		iyokanArgs       arrayFlags
 	)
 	fs.Var(&iyokanArgs, "iyokan-args", "Raw arguments for Iyokan")
@@ -697,10 +699,10 @@ func doResume() error {
 	args := []string{
 		"--resume", *inputFileName,
 	}
-	return runIyokanTFHE(*nClocks, *bkeyFileName, *outputFileName, *snapshotFileName, args, iyokanArgs)
+	return runIyokanTFHE(*nClocks, *bkeyFileName, *outputFileName, *snapshotFileName, *quiet, args, iyokanArgs)
 }
 
-func runIyokanTFHE(nClocks uint, bkeyFileName string, outputFileName string, snapshotFileName string, otherArgs0 []string, otherArgs1 []string) error {
+func runIyokanTFHE(nClocks uint, bkeyFileName string, outputFileName string, snapshotFileName string, quiet bool, otherArgs0 []string, otherArgs1 []string) error {
 	var err error
 
 	if snapshotFileName == "" {
@@ -715,16 +717,21 @@ func runIyokanTFHE(nClocks uint, bkeyFileName string, outputFileName string, sna
 		"-c", fmt.Sprint(nClocks),
 		"--snapshot", snapshotFileName,
 	}
+	if quiet {
+		args = append(args, "--quiet")
+	}
 	args = append(args, otherArgs0...)
 	args = append(args, otherArgs1...)
 	if err = runIyokan(args, []string{}); err != nil {
 		return err
 	}
 
-	fmt.Printf("\n")
-	fmt.Printf("Snapshot was taken as file '%s'. You can resume the process like:\n", snapshotFileName)
-	fmt.Printf("\t$ %s resume -c %d -i %s -o %s -bkey %s\n",
-		os.Args[0], nClocks, snapshotFileName, outputFileName, bkeyFileName)
+	if !quiet {
+		fmt.Printf("\n")
+		fmt.Printf("Snapshot was taken as file '%s'. You can resume the process like:\n", snapshotFileName)
+		fmt.Printf("\t$ %s resume -c %d -i %s -o %s -bkey %s\n",
+			os.Args[0], nClocks, snapshotFileName, outputFileName, bkeyFileName)
+	}
 
 	return nil
 }
