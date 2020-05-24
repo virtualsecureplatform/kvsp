@@ -83,6 +83,8 @@ func getPathOf(name string) (string, error) {
 			path = "../share/kvsp/cahp-diamond.toml"
 		case "IYOKAN-BLUEPRINT-EMERALD":
 			path = "../share/kvsp/cahp-emerald.toml"
+		case "IYOKAN-BLUEPRINT-RUBY":
+			path = "../share/kvsp/cahp-ruby.toml"
 		case "IYOKAN-PACKET":
 			path = "iyokan-packet"
 		default:
@@ -248,7 +250,7 @@ func runIyokan(args0 []string, args1 []string) error {
 	return execCmd(iyokanPath, args)
 }
 
-func packELF(inputFileName, outputFileName string, cmdOpts []string) error {
+func packELF(inputFileName, outputFileName string, cmdOpts []string, whichCAHPCPU string) error {
 	if !fileExists(inputFileName) {
 		return errors.New("File not found")
 	}
@@ -259,9 +261,10 @@ func packELF(inputFileName, outputFileName string, cmdOpts []string) error {
 	if err = attachCommandLineOptions(ram, cmdOpts); err != nil {
 		return err
 	}
-	ramA, ramB, err := splitRAM(ram)
-	if err != nil {
-		return err
+
+	args := []string{
+		"pack",
+		"--out", outputFileName,
 	}
 
 	// Write ROM data
@@ -270,40 +273,55 @@ func packELF(inputFileName, outputFileName string, cmdOpts []string) error {
 		return err
 	}
 	defer os.Remove(romTmpFile.Name())
-	_, err = romTmpFile.Write(rom)
-	if err != nil {
+	if _, err = romTmpFile.Write(rom); err != nil {
 		return err
 	}
+	args = append(args, "--rom", "rom:"+romTmpFile.Name())
 
-	// Write RAM A data
-	ramATmpFile, err := ioutil.TempFile("", "")
-	if err != nil {
-		return err
-	}
-	defer os.Remove(ramATmpFile.Name())
-	_, err = ramATmpFile.Write(ramA)
-	if err != nil {
-		return err
-	}
+	// Write RAM data
+	if whichCAHPCPU == "ruby" {
+		// Write RAM data
+		ramTmpFile, err := ioutil.TempFile("", "")
+		if err != nil {
+			return err
+		}
+		defer os.Remove(ramTmpFile.Name())
+		if _, err = ramTmpFile.Write(ram); err != nil {
+			return err
+		}
+		args = append(args, "--ram", "ram:"+ramTmpFile.Name())
+	} else {
+		// Split RAM into two
+		ramA, ramB, err := splitRAM(ram)
+		if err != nil {
+			return err
+		}
 
-	// Write RAM B data
-	ramBTmpFile, err := ioutil.TempFile("", "")
-	if err != nil {
-		return err
-	}
-	defer os.Remove(ramBTmpFile.Name())
-	_, err = ramBTmpFile.Write(ramB)
-	if err != nil {
-		return err
+		// Write RAM A data
+		ramATmpFile, err := ioutil.TempFile("", "")
+		if err != nil {
+			return err
+		}
+		defer os.Remove(ramATmpFile.Name())
+		if _, err = ramATmpFile.Write(ramA); err != nil {
+			return err
+		}
+		args = append(args, "--ram", "ramA:"+ramATmpFile.Name())
+
+		// Write RAM B data
+		ramBTmpFile, err := ioutil.TempFile("", "")
+		if err != nil {
+			return err
+		}
+		defer os.Remove(ramBTmpFile.Name())
+		if _, err = ramBTmpFile.Write(ramB); err != nil {
+			return err
+		}
+		args = append(args, "--ram", "ramB:"+ramBTmpFile.Name())
 	}
 
 	// Pack
-	_, err = runIyokanPacket("pack",
-		"--out", outputFileName,
-		"--rom", "rom:"+romTmpFile.Name(),
-		"--ram", "ramA:"+ramATmpFile.Name(),
-		"--ram", "ramB:"+ramBTmpFile.Name())
-	if err != nil {
+	if _, err = runIyokanPacket(args...); err != nil {
 		return err
 	}
 
@@ -353,22 +371,23 @@ func (pkt *plainPacket) loadTOML(src string) error {
 	}
 
 	// Load ram
-	var ramA, ramB []int
-	for _, entry := range pktTOML.Ram {
-		if entry.Name == "ramA" {
-			ramA = entry.Bytes
-		} else if entry.Name == "ramB" {
-			ramB = entry.Bytes
-		} else {
-			return errors.New("Invalid TOML for result packet")
-		}
-	}
 	pkt.Ram = make([]int, 512)
-	for addr := range pkt.Ram {
-		if addr%2 == 1 {
-			pkt.Ram[addr] = ramA[addr/2]
-		} else {
-			pkt.Ram[addr] = ramB[addr/2]
+	for _, entry := range pktTOML.Ram {
+		switch entry.Name {
+		case "ram":
+			for addr := range entry.Bytes {
+				pkt.Ram[addr] = entry.Bytes[addr]
+			}
+		case "ramA":
+			for addr := range entry.Bytes {
+				pkt.Ram[addr*2+1] = entry.Bytes[addr]
+			}
+		case "ramB":
+			for addr := range entry.Bytes {
+				pkt.Ram[addr*2] = entry.Bytes[addr]
+			}
+		default:
+			return errors.New("Invalid TOML for result packet")
 		}
 	}
 
@@ -421,7 +440,7 @@ func doCC() error {
 	}
 
 	// Run
-	args := []string{"-target", "cahp", "-mcpu=emerald", "-Oz", "--sysroot", cahpRtPath}
+	args := []string{"-target", "cahp", "-mcpu=generic", "-Oz", "--sysroot", cahpRtPath}
 	args = append(args, os.Args[2:]...)
 	return execCmd(path, args)
 }
@@ -441,7 +460,7 @@ func doEmu() error {
 	// Parse command-line arguments.
 	fs := flag.NewFlagSet("emu", flag.ExitOnError)
 	var (
-		whichCAHPCPU = fs.String("cahp-cpu", "emerald", "Which CAHP CPU you use, emerald or diamond")
+		whichCAHPCPU = fs.String("cahp-cpu", "ruby", "Which CAHP CPU you use, diamond, emerald, or ruby")
 		iyokanArgs   arrayFlags
 	)
 	fs.Var(&iyokanArgs, "iyokan-args", "Raw arguments for Iyokan")
@@ -455,7 +474,7 @@ func doEmu() error {
 	defer os.Remove(packedFile.Name())
 
 	// Pack
-	err = packELF(fs.Args()[0], packedFile.Name(), fs.Args()[1:])
+	err = packELF(fs.Args()[0], packedFile.Name(), fs.Args()[1:], *whichCAHPCPU)
 	if err != nil {
 		return err
 	}
@@ -544,6 +563,7 @@ func doEnc() error {
 		keyFileName    = fs.String("k", "", "Secret key file name")
 		inputFileName  = fs.String("i", "", "Input file name (plain)")
 		outputFileName = fs.String("o", "", "Output file name (encrypted)")
+		whichCAHPCPU   = fs.String("cahp-cpu", "ruby", "Which CAHP CPU you use, diamond, emerald, or ruby")
 	)
 	err := fs.Parse(os.Args[2:])
 	if err != nil {
@@ -561,7 +581,7 @@ func doEnc() error {
 	defer os.Remove(packedFile.Name())
 
 	// Pack
-	err = packELF(*inputFileName, packedFile.Name(), fs.Args())
+	err = packELF(*inputFileName, packedFile.Name(), fs.Args(), *whichCAHPCPU)
 	if err != nil {
 		return err
 	}
@@ -622,6 +642,7 @@ func doPlainpacket() error {
 	var (
 		inputFileName  = fs.String("i", "", "Input file name (plain)")
 		outputFileName = fs.String("o", "", "Output file name (encrypted)")
+		whichCAHPCPU   = fs.String("cahp-cpu", "ruby", "Which CAHP CPU you use, diamond, emerald, or ruby")
 	)
 	err := fs.Parse(os.Args[2:])
 	if err != nil {
@@ -631,7 +652,7 @@ func doPlainpacket() error {
 		return errors.New("Specify -i, and -o options properly")
 	}
 
-	return packELF(*inputFileName, *outputFileName, fs.Args())
+	return packELF(*inputFileName, *outputFileName, fs.Args(), *whichCAHPCPU)
 }
 
 func doRun() error {
@@ -643,7 +664,7 @@ func doRun() error {
 		inputFileName    = fs.String("i", "", "Input file name (encrypted)")
 		outputFileName   = fs.String("o", "", "Output file name (encrypted)")
 		numGPU           = fs.Uint("g", 0, "Number of GPUs (Unspecify or set 0 for CPU mode)")
-		whichCAHPCPU     = fs.String("cahp-cpu", "emerald", "Which CAHP CPU you use, emerald or diamond")
+		whichCAHPCPU     = fs.String("cahp-cpu", "ruby", "Which CAHP CPU you use, diamond, emerald, or ruby")
 		snapshotFileName = fs.String("snapshot", "", "Snapshot file name to write in")
 		quiet            = fs.Bool("quiet", false, "Be quiet")
 		iyokanArgs       arrayFlags
@@ -742,6 +763,7 @@ var iyokanRevision = "unk"
 var iyokanL1Revision = "unk"
 var cahpDiamondRevision = "unk"
 var cahpEmeraldRevision = "unk"
+var cahpRubyRevision = "unk"
 var cahpRtRevision = "unk"
 var cahpSimRevision = "unk"
 var llvmCahpRevision = "unk"
@@ -753,6 +775,7 @@ func doVersion() error {
 	fmt.Printf("- Iyokan-L1\t(rev %s)\n", iyokanL1Revision)
 	fmt.Printf("- cahp-diamond\t(rev %s)\n", cahpDiamondRevision)
 	fmt.Printf("- cahp-emerald\t(rev %s)\n", cahpEmeraldRevision)
+	fmt.Printf("- cahp-ruby\t(rev %s)\n", cahpRubyRevision)
 	fmt.Printf("- cahp-rt\t(rev %s)\n", cahpRtRevision)
 	fmt.Printf("- cahp-sim\t(rev %s)\n", cahpSimRevision)
 	fmt.Printf("- llvm-cahp\t(rev %s)\n", llvmCahpRevision)

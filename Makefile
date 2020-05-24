@@ -9,6 +9,7 @@ all: prepare \
 	 build/kvsp \
 	 build/share/kvsp/diamond-core.json \
 	 build/share/kvsp/emerald-core.json \
+	 build/share/kvsp/ruby-core.json \
 	 build/llvm-cahp \
 	 build/cahp-rt
 
@@ -27,6 +28,7 @@ build/kvsp:
 			-X main.iyokanL1Revision=$$(git -C ../Iyokan-L1 rev-parse --short HEAD) \
 			-X main.cahpDiamondRevision=$$(git -C ../cahp-diamond rev-parse --short HEAD) \
 			-X main.cahpEmeraldRevision=$$(git -C ../cahp-emerald rev-parse --short HEAD) \
+			-X main.cahpRubyRevision=$$(git -C ../cahp-ruby rev-parse --short HEAD) \
 			-X main.cahpRtRevision=$$(git -C ../cahp-rt rev-parse --short HEAD) \
 			-X main.cahpSimRevision=$$(git -C ../cahp-sim rev-parse --short HEAD) \
 			-X main.llvmCahpRevision=$$(git -C ../llvm-cahp rev-parse --short HEAD) \
@@ -61,6 +63,10 @@ build/cahp-emerald:
 	rsync -a --delete cahp-emerald/ build/cahp-emerald/
 	cd build/cahp-emerald && sbt run
 
+build/cahp-ruby:
+	rsync -a --delete cahp-ruby/ build/cahp-ruby/
+	cd build/cahp-ruby && sbt run
+
 build/yosys:
 	rsync -a --delete yosys build/
 	cd build/yosys && $(MAKE)
@@ -73,16 +79,26 @@ build/cahp-diamond/vsp-core-no-ram-rom.json: build/cahp-diamond build/yosys
 		../yosys/yosys build-no-ram-rom.ys
 
 # NOTE: build/cahp-diamond/vsp-core-no-ram-rom.json is "fake" dependency;
-# Without this the builds for Diamond and Emerald will run in parallel
+# Without this the builds for processors will run in parallel
 # to consume too much memory.
 build/cahp-emerald/vsp-core-no-ram-rom.json: build/cahp-emerald build/yosys build/cahp-diamond/vsp-core-no-ram-rom.json
 	cd build/cahp-emerald && \
 		../yosys/yosys build-no-ram-rom.ys
 
+# NOTE: build/cahp-emerald/vsp-core-no-ram-rom.json is "fake" dependency;
+# Without this the builds for processors will run in parallel
+# to consume too much memory.
+build/cahp-ruby/vsp-core-ruby.json: build/cahp-ruby build/yosys build/cahp-emerald/vsp-core-no-ram-rom.json
+	cd build/cahp-ruby && \
+		../yosys/yosys build.ys
+
 build/share/kvsp/diamond-core.json: build/cahp-diamond/vsp-core-no-ram-rom.json build/Iyokan-L1
 	dotnet run -p build/Iyokan-L1/ -c Release $< $@
 
 build/share/kvsp/emerald-core.json: build/cahp-emerald/vsp-core-no-ram-rom.json build/Iyokan-L1
+	dotnet run -p build/Iyokan-L1/ -c Release $< $@
+
+build/share/kvsp/ruby-core.json: build/cahp-ruby/vsp-core-ruby.json build/Iyokan-L1
 	dotnet run -p build/Iyokan-L1/ -c Release $< $@
 
 build/llvm-cahp:
