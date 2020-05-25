@@ -10,6 +10,7 @@ all: prepare \
 	 build/share/kvsp/diamond-core.json \
 	 build/share/kvsp/emerald-core.json \
 	 build/share/kvsp/ruby-core.json \
+	 build/share/kvsp/pearl-core.json \
 	 build/llvm-cahp \
 	 build/cahp-rt
 
@@ -29,6 +30,7 @@ build/kvsp:
 			-X main.cahpDiamondRevision=$$(git -C ../cahp-diamond rev-parse --short HEAD) \
 			-X main.cahpEmeraldRevision=$$(git -C ../cahp-emerald rev-parse --short HEAD) \
 			-X main.cahpRubyRevision=$$(git -C ../cahp-ruby rev-parse --short HEAD) \
+			-X main.cahpPearlRevision=$$(git -C ../cahp-pearl rev-parse --short HEAD) \
 			-X main.cahpRtRevision=$$(git -C ../cahp-rt rev-parse --short HEAD) \
 			-X main.cahpSimRevision=$$(git -C ../cahp-sim rev-parse --short HEAD) \
 			-X main.llvmCahpRevision=$$(git -C ../llvm-cahp rev-parse --short HEAD) \
@@ -67,6 +69,10 @@ build/cahp-ruby:
 	rsync -a --delete cahp-ruby/ build/cahp-ruby/
 	cd build/cahp-ruby && sbt run
 
+build/cahp-pearl:
+	rsync -a --delete cahp-pearl/ build/cahp-pearl/
+	cd build/cahp-pearl && sbt run
+
 build/yosys:
 	rsync -a --delete yosys build/
 	cd build/yosys && $(MAKE)
@@ -92,6 +98,13 @@ build/cahp-ruby/vsp-core-ruby.json: build/cahp-ruby build/yosys build/cahp-emera
 	cd build/cahp-ruby && \
 		../yosys/yosys build.ys
 
+# NOTE: build/cahp-ruby/vsp-core-ruby.json is "fake" dependency;
+# Without this the builds for processors will run in parallel
+# to consume too much memory.
+build/cahp-pearl/vsp-core-pearl.json: build/cahp-pearl build/yosys build/cahp-ruby/vsp-core-ruby.json
+	cd build/cahp-pearl && \
+		../yosys/yosys build.ys
+
 build/share/kvsp/diamond-core.json: build/cahp-diamond/vsp-core-no-ram-rom.json build/Iyokan-L1
 	dotnet run -p build/Iyokan-L1/ -c Release $< $@
 
@@ -99,6 +112,9 @@ build/share/kvsp/emerald-core.json: build/cahp-emerald/vsp-core-no-ram-rom.json 
 	dotnet run -p build/Iyokan-L1/ -c Release $< $@
 
 build/share/kvsp/ruby-core.json: build/cahp-ruby/vsp-core-ruby.json build/Iyokan-L1
+	dotnet run -p build/Iyokan-L1/ -c Release $< $@
+
+build/share/kvsp/pearl-core.json: build/cahp-pearl/vsp-core-pearl.json build/Iyokan-L1
 	dotnet run -p build/Iyokan-L1/ -c Release $< $@
 
 build/llvm-cahp:

@@ -19,6 +19,8 @@ import (
 
 var flagVerbose bool
 
+const defaultCAHPProc = "pearl"
+
 // Flag for a list of values
 // Thanks to: https://stackoverflow.com/a/28323276
 type arrayFlags []string
@@ -85,6 +87,8 @@ func getPathOf(name string) (string, error) {
 			path = "../share/kvsp/cahp-emerald.toml"
 		case "IYOKAN-BLUEPRINT-RUBY":
 			path = "../share/kvsp/cahp-ruby.toml"
+		case "IYOKAN-BLUEPRINT-PEARL":
+			path = "../share/kvsp/cahp-pearl.toml"
 		case "IYOKAN-PACKET":
 			path = "iyokan-packet"
 		default:
@@ -279,7 +283,7 @@ func packELF(inputFileName, outputFileName string, cmdOpts []string, whichCAHPCP
 	args = append(args, "--rom", "rom:"+romTmpFile.Name())
 
 	// Write RAM data
-	if whichCAHPCPU == "ruby" {
+	if whichCAHPCPU == "ruby" || whichCAHPCPU == "pearl" {
 		// Write RAM data
 		ramTmpFile, err := ioutil.TempFile("", "")
 		if err != nil {
@@ -460,7 +464,7 @@ func doEmu() error {
 	// Parse command-line arguments.
 	fs := flag.NewFlagSet("emu", flag.ExitOnError)
 	var (
-		whichCAHPCPU = fs.String("cahp-cpu", "ruby", "Which CAHP CPU you use, diamond, emerald, or ruby")
+		whichCAHPCPU = fs.String("cahp-cpu", defaultCAHPProc, "Which CAHP CPU you use, diamond, emerald, ruby, or pearl")
 		iyokanArgs   arrayFlags
 	)
 	fs.Var(&iyokanArgs, "iyokan-args", "Raw arguments for Iyokan")
@@ -563,7 +567,7 @@ func doEnc() error {
 		keyFileName    = fs.String("k", "", "Secret key file name")
 		inputFileName  = fs.String("i", "", "Input file name (plain)")
 		outputFileName = fs.String("o", "", "Output file name (encrypted)")
-		whichCAHPCPU   = fs.String("cahp-cpu", "ruby", "Which CAHP CPU you use, diamond, emerald, or ruby")
+		whichCAHPCPU   = fs.String("cahp-cpu", defaultCAHPProc, "Which CAHP CPU you use, diamond, emerald, ruby, or pearl")
 	)
 	err := fs.Parse(os.Args[2:])
 	if err != nil {
@@ -642,7 +646,7 @@ func doPlainpacket() error {
 	var (
 		inputFileName  = fs.String("i", "", "Input file name (plain)")
 		outputFileName = fs.String("o", "", "Output file name (encrypted)")
-		whichCAHPCPU   = fs.String("cahp-cpu", "ruby", "Which CAHP CPU you use, diamond, emerald, or ruby")
+		whichCAHPCPU   = fs.String("cahp-cpu", defaultCAHPProc, "Which CAHP CPU you use, diamond, emerald, ruby, or pearl")
 	)
 	err := fs.Parse(os.Args[2:])
 	if err != nil {
@@ -664,7 +668,7 @@ func doRun() error {
 		inputFileName    = fs.String("i", "", "Input file name (encrypted)")
 		outputFileName   = fs.String("o", "", "Output file name (encrypted)")
 		numGPU           = fs.Uint("g", 0, "Number of GPUs (Unspecify or set 0 for CPU mode)")
-		whichCAHPCPU     = fs.String("cahp-cpu", "ruby", "Which CAHP CPU you use, diamond, emerald, or ruby")
+		whichCAHPCPU     = fs.String("cahp-cpu", defaultCAHPProc, "Which CAHP CPU you use, diamond, emerald, ruby, or pearl")
 		snapshotFileName = fs.String("snapshot", "", "Snapshot file name to write in")
 		quiet            = fs.Bool("quiet", false, "Be quiet")
 		iyokanArgs       arrayFlags
@@ -764,6 +768,7 @@ var iyokanL1Revision = "unk"
 var cahpDiamondRevision = "unk"
 var cahpEmeraldRevision = "unk"
 var cahpRubyRevision = "unk"
+var cahpPearlRevision = "unk"
 var cahpRtRevision = "unk"
 var cahpSimRevision = "unk"
 var llvmCahpRevision = "unk"
@@ -776,6 +781,7 @@ func doVersion() error {
 	fmt.Printf("- cahp-diamond\t(rev %s)\n", cahpDiamondRevision)
 	fmt.Printf("- cahp-emerald\t(rev %s)\n", cahpEmeraldRevision)
 	fmt.Printf("- cahp-ruby\t(rev %s)\n", cahpRubyRevision)
+	fmt.Printf("- cahp-pearl\t(rev %s)\n", cahpPearlRevision)
 	fmt.Printf("- cahp-rt\t(rev %s)\n", cahpRtRevision)
 	fmt.Printf("- cahp-sim\t(rev %s)\n", cahpSimRevision)
 	fmt.Printf("- llvm-cahp\t(rev %s)\n", llvmCahpRevision)
