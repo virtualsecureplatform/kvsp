@@ -25,3 +25,6 @@
 [submodule "cahp-ruby"]
 	path = cahp-ruby
 	url = https://github.com/virtualsecureplatform/cahp-ruby.git
+[submodule "cahp-pearl"]
+	path = cahp-pearl
+	url = https://github.com/virtualsecureplatform/cahp-pearl.git
