@@ -1,14 +1,16 @@
-FROM ubuntu:18.04
+FROM nvidia/cuda:10.1-devel-ubuntu18.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get -y upgrade
-RUN apt-get install -y build-essential git cmake curl software-properties-common
-RUN apt-get install -y libtbb-dev openjdk-8-jre
+RUN apt-get install -y \
+    build-essential git curl software-properties-common openjdk-11-jre \
+    libstdc++-8-dev clang-9 clang-8 rsync bison flex libreadline-dev \
+    gawk tcl-dev libffi-dev graphviz xdot pkg-config python3 libboost-system-dev \
+	libboost-python-dev libboost-filesystem-dev zlib1g-dev
 
-# Install Go
-RUN add-apt-repository ppa:longsleep/golang-backports
-RUN apt-get update && apt-get install -y golang-go
+RUN ln -sf /usr/bin/clang-9 /usr/local/bin/clang
+RUN ln -sf /usr/bin/clang++-9 /usr/local/bin/clang++
 
 # Install .NET Core SDK
 RUN curl -sL https://packages.microsoft.com/config/ubuntu/18.04/packages-microsoft-prod.deb -o packages-microsoft-prod.deb
@@ -20,10 +22,14 @@ RUN echo "deb https://dl.bintray.com/sbt/debian /" | tee -a /etc/apt/sources.lis
 RUN curl -sL "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x2EE0EA64E40A89B84B2DF73499E82A75642AC823" | apt-key add
 RUN apt-get update && apt-get install -y sbt
 
-# Build yosys
-RUN git clone https://github.com/cliffordwolf/yosys.git
-RUN apt-get install -y tcl-dev libreadline6-dev bison flex libffi-dev
-RUN cd yosys && make CONFIG=gcc -j $(( $(grep cpu.cores /proc/cpuinfo | sort -u | sed 's/[^0-9]//g') + 1 )) && make CONFIG=gcc install
+# Install Go
+RUN add-apt-repository ppa:longsleep/golang-backports
+RUN apt-get update && apt-get install -y golang-go
+RUN go get github.com/BurntSushi/toml
+
+# Install CMake
+RUN curl -L https://github.com/Kitware/CMake/releases/download/v3.17.3/cmake-3.17.3-Linux-x86_64.sh -o cmake-3.17.3-Linux-x86_64.sh
+RUN sh cmake-3.17.3-Linux-x86_64.sh --skip-license --prefix=/usr/local
 
 # Run the build when executing `docker run`
-CMD ["make"]
+CMD ["bash", "-c", "make -j$(nproc) ENABLE_CUDA=1 CUDACXX=\"/usr/local/cuda/bin/nvcc\" CUDAHOSTCXX=\"/usr/bin/clang-8\""]
