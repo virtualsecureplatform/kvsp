@@ -61,15 +61,18 @@ build/cahp-diamond:
 	rsync -a --delete cahp-diamond/ build/cahp-diamond/
 	cd build/cahp-diamond && sbt run
 
-build/cahp-emerald:
+# NOTE: build/cahp-diamond is "fake" dependency;
+# parallel `sbt run` may cause some problems about file lock.
+# build/cahp-ruby and build/cahp-pearl are also similar.
+build/cahp-emerald: build/cahp-diamond
 	rsync -a --delete cahp-emerald/ build/cahp-emerald/
 	cd build/cahp-emerald && sbt run
 
-build/cahp-ruby:
+build/cahp-ruby: build/cahp-emerald
 	rsync -a --delete cahp-ruby/ build/cahp-ruby/
 	cd build/cahp-ruby && sbt run
 
-build/cahp-pearl:
+build/cahp-pearl: build/cahp-ruby
 	rsync -a --delete cahp-pearl/ build/cahp-pearl/
 	cd build/cahp-pearl && sbt run
 
