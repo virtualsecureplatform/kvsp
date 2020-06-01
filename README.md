@@ -170,11 +170,12 @@ $ make ENABLE_CUDA=1 CUDACXX="/usr/local/cuda/bin/nvcc" CUDAHOSTCXX="/usr/bin/cl
 
 ## Build KVSP Using Docker
 
-Based on Ubuntu 18.04 LTS image.
+Based on Ubuntu 18.04 LTS with NVIDIA CUDA image.
+Note that NVIDIA GPU is NOT necessary to build KVSP.
 
 ```
-# docker build -t kvsp-build .
-# docker run -it -v $PWD:/build -w /build kvsp-build:latest
+$ docker build -t kvsp-build .
+$ docker run -it -v $PWD:/build -w /build kvsp-build:latest
 ```
 
 ## Detailed Explanation on KVSP
