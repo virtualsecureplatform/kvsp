@@ -90,20 +90,15 @@ build/cahp-diamond/vsp-core-no-ram-rom.json: build/cahp-diamond build/yosys
 # NOTE: build/cahp-diamond/vsp-core-no-ram-rom.json is "fake" dependency;
 # Without this the builds for processors will run in parallel
 # to consume too much memory.
+# build/cahp-ruby and build/cahp-pearl are also similar.
 build/cahp-emerald/vsp-core-no-ram-rom.json: build/cahp-emerald build/yosys build/cahp-diamond/vsp-core-no-ram-rom.json
 	cd build/cahp-emerald && \
 		../yosys/yosys build-no-ram-rom.ys
 
-# NOTE: build/cahp-emerald/vsp-core-no-ram-rom.json is "fake" dependency;
-# Without this the builds for processors will run in parallel
-# to consume too much memory.
 build/cahp-ruby/vsp-core-ruby.json: build/cahp-ruby build/yosys build/cahp-emerald/vsp-core-no-ram-rom.json
 	cd build/cahp-ruby && \
 		../yosys/yosys build.ys
 
-# NOTE: build/cahp-ruby/vsp-core-ruby.json is "fake" dependency;
-# Without this the builds for processors will run in parallel
-# to consume too much memory.
 build/cahp-pearl/vsp-core-pearl.json: build/cahp-pearl build/yosys build/cahp-ruby/vsp-core-ruby.json
 	cd build/cahp-pearl && \
 		../yosys/yosys build.ys
