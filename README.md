@@ -132,7 +132,11 @@ We ensure that KVSP works on the following cloud services:
 
 - [さくらインターネット 高火力コンピューティング Tesla V100（32GB）モデル](https://www.sakura.ad.jp/koukaryoku/)
 - [GCP n1-standard-96 with 8 x NVIDIA Tesla V100](https://cloud.google.com/compute/docs/machine-types?hl=ja#n1_standard_machine_types)
+- [AWS EC2 p3.16xlarge](https://aws.amazon.com/jp/ec2/instance-types/p3/)
+- [AWS EC2 p3.8xlarge](https://aws.amazon.com/jp/ec2/instance-types/p3/)
+- [AWS EC2 p3.2xlarge](https://aws.amazon.com/jp/ec2/instance-types/p3/)
 - [AWS EC2 m5.metal](https://aws.amazon.com/ec2/instance-types/c5/)
+
 
 If you run KVSP locally, prepare a machine with the following devices:
 
@@ -141,6 +145,22 @@ If you run KVSP locally, prepare a machine with the following devices:
 - NVIDIA GPU (not required but highly recommended)
     - Only NVIDIA Tesla V100 is supported.
     - Other GPUs _may_ work but are not supported.
+    
+## Dependencies
+
+We use Ubuntu 18.04 in the development. Following commands setup the AWS instances.
+If you uses p3 instances, We highly recommend to increase EBS (Storage) size to 12 GB because intermediate files will be some GBs orders.
+
+p3 instances
+```
+sudo apt update&&sudo apt upgrade -y&&sudo apt install -y libgoogle-perftools-dev libomp-dev nvidia-driver-440&&sudo reboot
+```
+This commands includes reboot at last to enable a GPU driver.
+
+c5.metal
+```
+sudo apt update&&sudo apt upgrade -y&&sudo apt install -y libgoogle-perftools-dev libomp-dev
+```
 
 ## Build
 
