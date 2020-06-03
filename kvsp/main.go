@@ -19,7 +19,7 @@ import (
 
 var flagVerbose bool
 
-const defaultCAHPProc = "pearl"
+const defaultCAHPProc = "ruby"
 
 // Flag for a list of values
 // Thanks to: https://stackoverflow.com/a/28323276
