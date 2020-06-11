@@ -7,8 +7,6 @@ all: prepare \
 	 build/cahp-sim \
 	 build/Iyokan \
 	 build/kvsp \
-	 build/share/kvsp/diamond-core.json \
-	 build/share/kvsp/emerald-core.json \
 	 build/share/kvsp/ruby-core.json \
 	 build/share/kvsp/pearl-core.json \
 	 build/llvm-cahp \
@@ -27,8 +25,6 @@ build/kvsp:
 			-X main.kvspRevision=$$(git rev-parse --short HEAD) \
 			-X main.iyokanRevision=$$(git -C ../Iyokan rev-parse --short HEAD) \
 			-X main.iyokanL1Revision=$$(git -C ../Iyokan-L1 rev-parse --short HEAD) \
-			-X main.cahpDiamondRevision=$$(git -C ../cahp-diamond rev-parse --short HEAD) \
-			-X main.cahpEmeraldRevision=$$(git -C ../cahp-emerald rev-parse --short HEAD) \
 			-X main.cahpRubyRevision=$$(git -C ../cahp-ruby rev-parse --short HEAD) \
 			-X main.cahpPearlRevision=$$(git -C ../cahp-pearl rev-parse --short HEAD) \
 			-X main.cahpRtRevision=$$(git -C ../cahp-rt rev-parse --short HEAD) \
@@ -57,21 +53,12 @@ build/cahp-sim:
 		$(MAKE) cahp-sim
 	cp build/cahp-sim/src/cahp-sim build/bin/
 
-build/cahp-diamond:
-	rsync -a --delete cahp-diamond/ build/cahp-diamond/
-	cd build/cahp-diamond && sbt run
-
-# NOTE: build/cahp-diamond is "fake" dependency;
-# parallel `sbt run` may cause some problems about file lock.
-# build/cahp-ruby and build/cahp-pearl are also similar.
-build/cahp-emerald: build/cahp-diamond
-	rsync -a --delete cahp-emerald/ build/cahp-emerald/
-	cd build/cahp-emerald && sbt run
-
-build/cahp-ruby: build/cahp-emerald
+build/cahp-ruby:
 	rsync -a --delete cahp-ruby/ build/cahp-ruby/
 	cd build/cahp-ruby && sbt run
 
+# NOTE: build/cahp-pearl is "fake" dependency;
+# parallel `sbt run` may cause some problems about file lock.
 build/cahp-pearl: build/cahp-ruby
 	rsync -a --delete cahp-pearl/ build/cahp-pearl/
 	cd build/cahp-pearl && sbt run
@@ -83,31 +70,13 @@ build/yosys:
 build/Iyokan-L1:
 	cp -r Iyokan-L1 build/
 
-build/cahp-diamond/vsp-core-no-ram-rom.json: build/cahp-diamond build/yosys
-	cd build/cahp-diamond && \
-		../yosys/yosys build-no-ram-rom.ys
-
-# NOTE: build/cahp-diamond/vsp-core-no-ram-rom.json is "fake" dependency;
-# Without this the builds for processors will run in parallel
-# to consume too much memory.
-# build/cahp-ruby and build/cahp-pearl are also similar.
-build/cahp-emerald/vsp-core-no-ram-rom.json: build/cahp-emerald build/yosys build/cahp-diamond/vsp-core-no-ram-rom.json
-	cd build/cahp-emerald && \
-		../yosys/yosys build-no-ram-rom.ys
-
-build/cahp-ruby/vsp-core-ruby.json: build/cahp-ruby build/yosys build/cahp-emerald/vsp-core-no-ram-rom.json
+build/cahp-ruby/vsp-core-ruby.json: build/cahp-ruby build/yosys
 	cd build/cahp-ruby && \
 		../yosys/yosys build.ys
 
-build/cahp-pearl/vsp-core-pearl.json: build/cahp-pearl build/yosys build/cahp-ruby/vsp-core-ruby.json
+build/cahp-pearl/vsp-core-pearl.json: build/cahp-pearl build/yosys
 	cd build/cahp-pearl && \
 		../yosys/yosys build.ys
-
-build/share/kvsp/diamond-core.json: build/cahp-diamond/vsp-core-no-ram-rom.json build/Iyokan-L1
-	dotnet run -p build/Iyokan-L1/ -c Release $< $@
-
-build/share/kvsp/emerald-core.json: build/cahp-emerald/vsp-core-no-ram-rom.json build/Iyokan-L1
-	dotnet run -p build/Iyokan-L1/ -c Release $< $@
 
 build/share/kvsp/ruby-core.json: build/cahp-ruby/vsp-core-ruby.json build/Iyokan-L1
 	dotnet run -p build/Iyokan-L1/ -c Release $< $@
