@@ -1,23 +1,25 @@
 KVSP consists of many different components, which are distributed under
 different licenses.
 
-1. The following directories have their own LICENSE files, so read them.
+1. The following directories are our works and have their own LICENSE/COPYING files.
 
 - Iyokan-L1/
 - Iyokan/
-- cahp-diamond/
+- cahp-pearl/
+- cahp-ruby/
 - cahp-rt/
 - cahp-sim/
 
 
-2. The following directories were authored in other projects (not our works),
-but modified and used in this project.
+2. The following directories were authored in other projects (not our works).
 
 - llvm-cahp/
     See llvm-cahp/*/LICENSE*.
+- yosys/
+    See yosys/COPYING.
 
 
-3. The following files and directories are licensed under the Apache License, Version 2.0.
+3. The following files and directories are our works and licensed under the Apache License, Version 2.0.
 
 - files in the root directory.
 - kvsp/
