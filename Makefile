@@ -21,16 +21,16 @@ build/kvsp:
 	mkdir -p build/kvsp
 	cd kvsp && \
 		go build -o ../build/kvsp/kvsp -ldflags "\
-			-X main.kvspVersion=$$(git describe --tags --abbrev=0) \
-			-X main.kvspRevision=$$(git rev-parse --short HEAD) \
-			-X main.iyokanRevision=$$(git -C ../Iyokan rev-parse --short HEAD) \
-			-X main.iyokanL1Revision=$$(git -C ../Iyokan-L1 rev-parse --short HEAD) \
-			-X main.cahpRubyRevision=$$(git -C ../cahp-ruby rev-parse --short HEAD) \
-			-X main.cahpPearlRevision=$$(git -C ../cahp-pearl rev-parse --short HEAD) \
-			-X main.cahpRtRevision=$$(git -C ../cahp-rt rev-parse --short HEAD) \
-			-X main.cahpSimRevision=$$(git -C ../cahp-sim rev-parse --short HEAD) \
-			-X main.llvmCahpRevision=$$(git -C ../llvm-cahp rev-parse --short HEAD) \
-			-X main.yosysRevision=$$(git -C ../yosys rev-parse --short HEAD)"
+			-X main.kvspVersion=$$(git describe --tags --abbrev=0 || echo "unk") \
+			-X main.kvspRevision=$$(git rev-parse --short HEAD || echo "unk") \
+			-X main.iyokanRevision=$$(git -C ../Iyokan rev-parse --short HEAD || echo "unk") \
+			-X main.iyokanL1Revision=$$(git -C ../Iyokan-L1 rev-parse --short HEAD || echo "unk") \
+			-X main.cahpRubyRevision=$$(git -C ../cahp-ruby rev-parse --short HEAD || echo "unk") \
+			-X main.cahpPearlRevision=$$(git -C ../cahp-pearl rev-parse --short HEAD || echo "unk") \
+			-X main.cahpRtRevision=$$(git -C ../cahp-rt rev-parse --short HEAD || echo "unk") \
+			-X main.cahpSimRevision=$$(git -C ../cahp-sim rev-parse --short HEAD || echo "unk") \
+			-X main.llvmCahpRevision=$$(git -C ../llvm-cahp rev-parse --short HEAD || echo "unk") \
+			-X main.yosysRevision=$$(git -C ../yosys rev-parse --short HEAD || echo "unk")"
 	cp build/kvsp/kvsp build/bin/
 
 build/Iyokan:
