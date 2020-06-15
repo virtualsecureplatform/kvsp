@@ -141,11 +141,11 @@ We ensure that KVSP works on the following cloud services:
 If you run KVSP locally, prepare a machine with the following devices:
 
 - Intel CPU with AVX2 support (e.g. Intel Core i7-8700)
-- 8GB RAM
+- 16GB RAM
 - NVIDIA GPU (not required but highly recommended)
     - Only NVIDIA Tesla V100 is supported.
     - Other GPUs _may_ work but are not supported.
-    
+
 ## Dependencies
 
 We use Ubuntu 18.04 in the development. Following commands setup the AWS instances.
