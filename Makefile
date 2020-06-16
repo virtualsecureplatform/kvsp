@@ -69,6 +69,7 @@ build/yosys:
 
 build/Iyokan-L1:
 	cp -r Iyokan-L1 build/
+	cd build/Iyokan-L1 && dotnet build
 
 build/cahp-ruby/vsp-core-ruby.json: build/cahp-ruby build/yosys
 	cd build/cahp-ruby && \
