@@ -2,12 +2,13 @@ FROM nvidia/cuda:10.1-devel-ubuntu18.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get update && apt-get -y upgrade
-RUN apt-get install -y \
+RUN apt-get update && apt-get install -y \
     build-essential git curl software-properties-common openjdk-11-jre \
-    libstdc++-8-dev clang-9 clang-8 rsync bison flex libreadline-dev \
+    libstdc++-8-dev clang-9 clang-8 bison flex libreadline-dev \
     gawk tcl-dev libffi-dev graphviz xdot pkg-config python3 libboost-system-dev \
-	libboost-python-dev libboost-filesystem-dev zlib1g-dev
+	libboost-python-dev libboost-filesystem-dev zlib1g-dev \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 RUN ln -sf /usr/bin/clang-9 /usr/local/bin/clang
 RUN ln -sf /usr/bin/clang++-9 /usr/local/bin/clang++

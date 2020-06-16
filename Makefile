@@ -15,7 +15,7 @@ all: prepare \
 prepare:
 	mkdir -p build/bin
 	mkdir -p build/share/kvsp
-	rsync -a --delete share/* build/share/kvsp/
+	cp -a share/* build/share/kvsp/
 
 build/kvsp:
 	mkdir -p build/kvsp
@@ -31,7 +31,7 @@ build/kvsp:
 			-X main.cahpSimRevision=$$(git -C ../cahp-sim rev-parse --short HEAD || echo "unk") \
 			-X main.llvmCahpRevision=$$(git -C ../llvm-cahp rev-parse --short HEAD || echo "unk") \
 			-X main.yosysRevision=$$(git -C ../yosys rev-parse --short HEAD || echo "unk")"
-	cp build/kvsp/kvsp build/bin/
+	cp -a build/kvsp/kvsp build/bin/
 
 build/Iyokan:
 	mkdir -p build/Iyokan
@@ -41,8 +41,8 @@ build/Iyokan:
 			-DIYOKAN_ENABLE_CUDA=$(ENABLE_CUDA) \
 			../../Iyokan && \
 		$(MAKE) iyokan iyokan-packet
-	cp build/Iyokan/bin/iyokan build/bin/
-	cp build/Iyokan/bin/iyokan-packet build/bin/
+	cp -a build/Iyokan/bin/iyokan build/bin/
+	cp -a build/Iyokan/bin/iyokan-packet build/bin/
 
 build/cahp-sim:
 	mkdir -p build/cahp-sim
@@ -51,24 +51,24 @@ build/cahp-sim:
 			-DCMAKE_BUILD_TYPE="Release" \
 			../../cahp-sim && \
 		$(MAKE) cahp-sim
-	cp build/cahp-sim/src/cahp-sim build/bin/
+	cp -a build/cahp-sim/src/cahp-sim build/bin/
 
 build/cahp-ruby:
-	rsync -a --delete cahp-ruby/ build/cahp-ruby/
+	cp -a cahp-ruby build/
 	cd build/cahp-ruby && sbt run
 
 # NOTE: build/cahp-pearl is "fake" dependency;
 # parallel `sbt run` may cause some problems about file lock.
 build/cahp-pearl: build/cahp-ruby
-	rsync -a --delete cahp-pearl/ build/cahp-pearl/
+	cp -a cahp-pearl build/
 	cd build/cahp-pearl && sbt run
 
 build/yosys:
-	rsync -a --delete yosys build/
+	cp -a yosys build/
 	cd build/yosys && $(MAKE)
 
 build/Iyokan-L1:
-	cp -r Iyokan-L1 build/
+	cp -a Iyokan-L1 build/
 	cd build/Iyokan-L1 && dotnet build
 
 build/cahp-ruby/vsp-core-ruby.json: build/cahp-ruby build/yosys
@@ -95,13 +95,13 @@ build/llvm-cahp:
 			-DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD="CAHP" \
 			../../llvm-cahp/llvm && \
 		$(MAKE)
-	rsync -a build/llvm-cahp/bin/ build/bin/
+	cp -a build/llvm-cahp/bin/* build/bin/
 
 build/cahp-rt: build/llvm-cahp
-	cp -r cahp-rt build/
+	cp -a cahp-rt build/
 	cd build/cahp-rt && CC=../llvm-cahp/bin/clang $(MAKE)
 	mkdir -p build/share/kvsp/cahp-rt
 	cd build/cahp-rt && \
-		cp crt0.o libc.a cahp.lds ../share/kvsp/cahp-rt/
+		cp -a crt0.o libc.a cahp.lds ../share/kvsp/cahp-rt/
 
 .PHONY: all prepare
