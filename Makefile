@@ -17,7 +17,7 @@ prepare:
 	mkdir -p build/share/kvsp
 	cp -a share/* build/share/kvsp/
 
-build/kvsp:
+build/kvsp: prepare
 	mkdir -p build/kvsp
 	cd kvsp && \
 		go build -o ../build/kvsp/kvsp -ldflags "\
@@ -33,7 +33,7 @@ build/kvsp:
 			-X main.yosysRevision=$$(git -C ../yosys rev-parse --short HEAD || echo "unk")"
 	cp -a build/kvsp/kvsp build/bin/
 
-build/Iyokan:
+build/Iyokan: prepare
 	mkdir -p build/Iyokan
 	cd build/Iyokan && \
 		cmake \
@@ -44,7 +44,7 @@ build/Iyokan:
 	cp -a build/Iyokan/bin/iyokan build/bin/
 	cp -a build/Iyokan/bin/iyokan-packet build/bin/
 
-build/cahp-sim:
+build/cahp-sim: prepare
 	mkdir -p build/cahp-sim
 	cd build/cahp-sim && \
 		cmake \
@@ -53,39 +53,39 @@ build/cahp-sim:
 		$(MAKE) cahp-sim
 	cp -a build/cahp-sim/src/cahp-sim build/bin/
 
-build/cahp-ruby:
+build/cahp-ruby: prepare
 	cp -a cahp-ruby build/
 	cd build/cahp-ruby && sbt run
 
 # NOTE: build/cahp-pearl is "fake" dependency;
 # parallel `sbt run` may cause some problems about file lock.
-build/cahp-pearl: build/cahp-ruby
+build/cahp-pearl: prepare build/cahp-ruby
 	cp -a cahp-pearl build/
 	cd build/cahp-pearl && sbt run
 
-build/yosys:
+build/yosys: prepare
 	cp -a yosys build/
 	cd build/yosys && $(MAKE)
 
-build/Iyokan-L1:
+build/Iyokan-L1: prepare
 	cp -a Iyokan-L1 build/
 	cd build/Iyokan-L1 && dotnet build
 
-build/cahp-ruby/vsp-core-ruby.json: build/cahp-ruby build/yosys
+build/cahp-ruby/vsp-core-ruby.json: prepare build/cahp-ruby build/yosys
 	cd build/cahp-ruby && \
 		../yosys/yosys build.ys
 
-build/cahp-pearl/vsp-core-pearl.json: build/cahp-pearl build/yosys
+build/cahp-pearl/vsp-core-pearl.json: prepare build/cahp-pearl build/yosys
 	cd build/cahp-pearl && \
 		../yosys/yosys build.ys
 
-build/share/kvsp/ruby-core.json: build/cahp-ruby/vsp-core-ruby.json build/Iyokan-L1
-	dotnet run -p build/Iyokan-L1/ -c Release $< $@
+build/share/kvsp/ruby-core.json: prepare build/cahp-ruby/vsp-core-ruby.json build/Iyokan-L1
+	dotnet run -p build/Iyokan-L1/ -c Release build/cahp-ruby/vsp-core-ruby.json build/share/kvsp/ruby-core.json
 
-build/share/kvsp/pearl-core.json: build/cahp-pearl/vsp-core-pearl.json build/Iyokan-L1
-	dotnet run -p build/Iyokan-L1/ -c Release $< $@
+build/share/kvsp/pearl-core.json: prepare build/cahp-pearl/vsp-core-pearl.json build/Iyokan-L1
+	dotnet run -p build/Iyokan-L1/ -c Release build/cahp-pearl/vsp-core-pearl.json build/share/kvsp/pearl-core.json
 
-build/llvm-cahp:
+build/llvm-cahp: prepare
 	mkdir -p build/llvm-cahp
 	cd build/llvm-cahp && \
 		cmake \
@@ -97,7 +97,7 @@ build/llvm-cahp:
 		$(MAKE)
 	cp -a build/llvm-cahp/bin/* build/bin/
 
-build/cahp-rt: build/llvm-cahp
+build/cahp-rt: prepare build/llvm-cahp
 	cp -a cahp-rt build/
 	cd build/cahp-rt && CC=../llvm-cahp/bin/clang $(MAKE)
 	mkdir -p build/share/kvsp/cahp-rt
