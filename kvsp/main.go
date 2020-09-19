@@ -20,6 +20,8 @@ import (
 var flagVerbose bool
 
 const defaultCAHPProc = "ruby"
+const defaultROMSize = 512
+const defaultRAMSize = 512
 
 // Flag for a list of values
 // Thanks to: https://stackoverflow.com/a/28323276
@@ -108,14 +110,14 @@ func getPathOf(name string) (string, error) {
 }
 
 // Parse the input as ELF and get ROM and RAM images.
-func parseELF(fileName string) ([]byte, []byte, error) {
+func parseELF(fileName string, romSize, ramSize uint64) ([]byte, []byte, error) {
 	input, err := elf.Open(fileName)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	rom := make([]byte, 512)
-	ram := make([]byte, 512)
+	rom := make([]byte, romSize)
+	ram := make([]byte, ramSize)
 
 	for _, prog := range input.Progs {
 		addr := prog.ProgHeader.Vaddr
@@ -126,8 +128,14 @@ func parseELF(fileName string) ([]byte, []byte, error) {
 
 		var mem []byte
 		if addr < 0x10000 { // ROM
+			if addr+size >= romSize {
+				return nil, nil, errors.New("Invalid ROM size: too small")
+			}
 			mem = rom[addr : addr+size]
 		} else { // RAM
+			if addr-0x10000+size >= ramSize {
+				return nil, nil, errors.New("Invalid RAM size: too small")
+			}
 			mem = ram[addr-0x10000 : addr-0x10000+size]
 		}
 
@@ -157,7 +165,8 @@ func attachCommandLineOptions(ram []byte, cmdOptsSrc []string) error {
 		0,
 	}
 
-	index := 512 - 2
+	ramSize := len(ram)
+	index := ramSize - 2
 
 	// Set **argv to RAM
 	for i := len(cmdOpts) - 1; i >= 0; i-- {
@@ -182,16 +191,20 @@ func attachCommandLineOptions(ram []byte, cmdOptsSrc []string) error {
 	write16le(ram[index:index+2], argc)
 	// Save initial stack pointer in RAM
 	initSP := index
-	write16le(ram[512-2:512], initSP)
+	write16le(ram[ramSize-2:ramSize], initSP)
 
 	return nil
 }
 
 func splitRAM(ram []byte) ([]byte, []byte, error) {
-	ramA := make([]byte, 256)
-	ramB := make([]byte, 256)
+	ramSize := len(ram)
+	if ramSize%2 == 1 {
+		return nil, nil, errors.New("Invalid RAM size: not even")
+	}
+	ramA := make([]byte, ramSize/2)
+	ramB := make([]byte, ramSize/2)
 
-	for i := 0; i < 512; i++ {
+	for i := 0; i < ramSize; i++ {
 		if i%2 == 1 {
 			ramA[i/2] = ram[i]
 		} else {
@@ -250,11 +263,16 @@ func runIyokan(args0 []string, args1 []string) error {
 	return execCmd(iyokanPath, args)
 }
 
-func packELF(inputFileName, outputFileName string, cmdOpts []string, whichCAHPCPU string) error {
+func packELF(
+	inputFileName, outputFileName string,
+	cmdOpts []string,
+	whichCAHPCPU string,
+	romSize, ramSize uint64,
+) error {
 	if !fileExists(inputFileName) {
 		return errors.New("File not found")
 	}
-	rom, ram, err := parseELF(inputFileName)
+	rom, ram, err := parseELF(inputFileName, romSize, ramSize)
 	if err != nil {
 		return err
 	}
@@ -371,24 +389,40 @@ func (pkt *plainPacket) loadTOML(src string) error {
 	}
 
 	// Load ram
-	pkt.Ram = make([]int, 512)
+	mapRam := make(map[string]plainPacketEntryTOML)
 	for _, entry := range pktTOML.Ram {
-		switch entry.Name {
-		case "ram":
-			for addr := range entry.Bytes {
-				pkt.Ram[addr] = entry.Bytes[addr]
-			}
-		case "ramA":
-			for addr := range entry.Bytes {
-				pkt.Ram[addr*2+1] = entry.Bytes[addr]
-			}
-		case "ramB":
-			for addr := range entry.Bytes {
-				pkt.Ram[addr*2] = entry.Bytes[addr]
-			}
-		default:
-			return errors.New("Invalid TOML for result packet")
+		if _, exists := mapRam[entry.Name]; exists {
+			return errors.New("Invalid TOML data: same entry name in ram")
 		}
+		mapRam[entry.Name] = entry
+	}
+	pkt.Ram = nil
+	if entry, ok := mapRam["ram"]; ok {
+		if entry.Size%8 != 0 {
+			return errors.New("Invalid RAM data: size is not multiple of 8")
+		}
+		pkt.Ram = make([]int, entry.Size/8)
+		for addr := range entry.Bytes {
+			pkt.Ram[addr] = entry.Bytes[addr]
+		}
+	} else if entryA, ok := mapRam["ramA"]; ok {
+		entryB, ok := mapRam["ramB"]
+		if !ok {
+			return errors.New("Invalid RAM data: only ramA found, not found ramB")
+		}
+		if entryA.Size != entryB.Size {
+			return errors.New("Invalid RAM data: size of ramA is different from that of ramB")
+		}
+		if (entryA.Size*2/8)%8 != 0 {
+			return errors.New("Invalid RAM data: size is not multiple of 8")
+		}
+		pkt.Ram = make([]int, entryA.Size*2/8)
+		for addr := range entryA.Bytes {
+			pkt.Ram[addr*2+1] = entryA.Bytes[addr]
+			pkt.Ram[addr*2] = entryB.Bytes[addr]
+		}
+	} else {
+		return errors.New("Invalid TOML for result packet")
 	}
 
 	// Check if the packet is correct
@@ -415,7 +449,7 @@ func (pkt *plainPacket) print(w io.Writer) error {
 	}
 	fmt.Fprintf(w, "\n")
 	fmt.Fprintf(w, "      \t 0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f")
-	for addr := 0; addr < 512; addr++ {
+	for addr := 0; addr < len(pkt.Ram); addr++ {
 		if addr%16 == 0 {
 			fmt.Fprintf(w, "\n%06x\t", addr)
 		}
@@ -461,6 +495,8 @@ func doEmu() error {
 	fs := flag.NewFlagSet("emu", flag.ExitOnError)
 	var (
 		whichCAHPCPU = fs.String("cahp-cpu", defaultCAHPProc, "Which CAHP CPU you use, ruby or pearl")
+		romSize      = fs.Uint64("rom-size", defaultROMSize, "ROM size")
+		ramSize      = fs.Uint64("ram-size", defaultRAMSize, "RAM size")
 		iyokanArgs   arrayFlags
 	)
 	fs.Var(&iyokanArgs, "iyokan-args", "Raw arguments for Iyokan")
@@ -474,7 +510,7 @@ func doEmu() error {
 	defer os.Remove(packedFile.Name())
 
 	// Pack
-	err = packELF(fs.Args()[0], packedFile.Name(), fs.Args()[1:], *whichCAHPCPU)
+	err = packELF(fs.Args()[0], packedFile.Name(), fs.Args()[1:], *whichCAHPCPU, *romSize, *ramSize)
 	if err != nil {
 		return err
 	}
@@ -564,6 +600,8 @@ func doEnc() error {
 		inputFileName  = fs.String("i", "", "Input file name (plain)")
 		outputFileName = fs.String("o", "", "Output file name (encrypted)")
 		whichCAHPCPU   = fs.String("cahp-cpu", defaultCAHPProc, "Which CAHP CPU you use, ruby or pearl")
+		romSize        = fs.Uint64("rom-size", defaultROMSize, "ROM size")
+		ramSize        = fs.Uint64("ram-size", defaultRAMSize, "RAM size")
 	)
 	err := fs.Parse(os.Args[2:])
 	if err != nil {
@@ -581,7 +619,7 @@ func doEnc() error {
 	defer os.Remove(packedFile.Name())
 
 	// Pack
-	err = packELF(*inputFileName, packedFile.Name(), fs.Args(), *whichCAHPCPU)
+	err = packELF(*inputFileName, packedFile.Name(), fs.Args(), *whichCAHPCPU, *romSize, *ramSize)
 	if err != nil {
 		return err
 	}
@@ -643,6 +681,8 @@ func doPlainpacket() error {
 		inputFileName  = fs.String("i", "", "Input file name (plain)")
 		outputFileName = fs.String("o", "", "Output file name (encrypted)")
 		whichCAHPCPU   = fs.String("cahp-cpu", defaultCAHPProc, "Which CAHP CPU you use, ruby or pearl")
+		romSize        = fs.Uint64("rom-size", defaultROMSize, "ROM size")
+		ramSize        = fs.Uint64("ram-size", defaultRAMSize, "RAM size")
 	)
 	err := fs.Parse(os.Args[2:])
 	if err != nil {
@@ -652,7 +692,7 @@ func doPlainpacket() error {
 		return errors.New("Specify -i, and -o options properly")
 	}
 
-	return packELF(*inputFileName, *outputFileName, fs.Args(), *whichCAHPCPU)
+	return packELF(*inputFileName, *outputFileName, fs.Args(), *whichCAHPCPU, *romSize, *ramSize)
 }
 
 func doRun() error {
