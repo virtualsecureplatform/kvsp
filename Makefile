@@ -75,7 +75,10 @@ build/cahp-ruby/vsp-core-ruby.json: prepare build/cahp-ruby build/yosys
 	cd build/cahp-ruby && \
 		../yosys/yosys build.ys
 
-build/cahp-pearl/vsp-core-pearl.json: prepare build/cahp-pearl build/yosys
+# NOTE: build/cahp-pearl/vsp-core-pearl.json is "fake" dependency;
+# Without this the builds for processors will run in parallel
+# to consume too much memory.
+build/cahp-pearl/vsp-core-pearl.json: prepare build/cahp-pearl build/yosys build/cahp-ruby/vsp-core-ruby.json
 	cd build/cahp-pearl && \
 		../yosys/yosys build.ys
 
