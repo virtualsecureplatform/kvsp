@@ -6,22 +6,22 @@ name = "core"
 [[builtin]]
 type = "rom"
 name = "rom"
-in_addr_width = 7
+in_addr_width = 8
 out_rdata_width = 32
 
 [[builtin]]
 type = "ram"
 name = "ram"
-in_addr_width = 8
+in_addr_width = 9
 in_wdata_width = 16
 out_rdata_width = 16
 
 [connect]
-"rom/addr[0:6]"          = "core/io_rom_addr[0:6]"
+"rom/addr[0:7]"          = "core/io_rom_addr[0:7]"
 "core/io_rom_data[0:31]" = "rom/rdata[0:31]"
 
 "ram/wren"      = "core/io_ram_writeEnable"
-"ram/addr[0:7]" = "core/io_ram_addr[0:7]"
+"ram/addr[0:8]" = "core/io_ram_addr[0:8]"
 "ram/wdata[0:15]" = "core/io_ram_writeData[0:15]"
 "core/io_ram_readData[0:15]" = "ram/rdata[0:15]"
 
