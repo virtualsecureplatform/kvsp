@@ -428,8 +428,6 @@ func doEmu() error {
 	fs := flag.NewFlagSet("emu", flag.ExitOnError)
 	var (
 		whichCAHPCPU = fs.String("cahp-cpu", defaultCAHPProc, "Which CAHP CPU you use, ruby or pearl")
-		romSize      = fs.Uint64("rom-size", defaultROMSize, "ROM size")
-		ramSize      = fs.Uint64("ram-size", defaultRAMSize, "RAM size")
 		iyokanArgs   arrayFlags
 	)
 	fs.Var(&iyokanArgs, "iyokan-args", "Raw arguments for Iyokan")
@@ -443,7 +441,7 @@ func doEmu() error {
 	defer os.Remove(packedFile.Name())
 
 	// Pack
-	err = packELF(fs.Args()[0], packedFile.Name(), fs.Args()[1:], *romSize, *ramSize)
+	err = packELF(fs.Args()[0], packedFile.Name(), fs.Args()[1:], defaultROMSize, defaultRAMSize)
 	if err != nil {
 		return err
 	}
@@ -532,8 +530,6 @@ func doEnc() error {
 		keyFileName    = fs.String("k", "", "Secret key file name")
 		inputFileName  = fs.String("i", "", "Input file name (plain)")
 		outputFileName = fs.String("o", "", "Output file name (encrypted)")
-		romSize        = fs.Uint64("rom-size", defaultROMSize, "ROM size")
-		ramSize        = fs.Uint64("ram-size", defaultRAMSize, "RAM size")
 	)
 	err := fs.Parse(os.Args[2:])
 	if err != nil {
@@ -551,7 +547,7 @@ func doEnc() error {
 	defer os.Remove(packedFile.Name())
 
 	// Pack
-	err = packELF(*inputFileName, packedFile.Name(), fs.Args(), *romSize, *ramSize)
+	err = packELF(*inputFileName, packedFile.Name(), fs.Args(), defaultROMSize, defaultRAMSize)
 	if err != nil {
 		return err
 	}
@@ -612,8 +608,6 @@ func doPlainpacket() error {
 	var (
 		inputFileName  = fs.String("i", "", "Input file name (plain)")
 		outputFileName = fs.String("o", "", "Output file name (encrypted)")
-		romSize        = fs.Uint64("rom-size", defaultROMSize, "ROM size")
-		ramSize        = fs.Uint64("ram-size", defaultRAMSize, "RAM size")
 	)
 	err := fs.Parse(os.Args[2:])
 	if err != nil {
@@ -623,7 +617,7 @@ func doPlainpacket() error {
 		return errors.New("Specify -i, and -o options properly")
 	}
 
-	return packELF(*inputFileName, *outputFileName, fs.Args(), *romSize, *ramSize)
+	return packELF(*inputFileName, *outputFileName, fs.Args(), defaultROMSize, defaultRAMSize)
 }
 
 func doRun() error {
