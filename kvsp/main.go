@@ -734,7 +734,7 @@ var llvmCahpRevision = "unk"
 var yosysRevision = "unk"
 
 func doVersion() error {
-	fmt.Printf("KVSP %s\t(rev %s)\n", kvspVersion, kvspRevision)
+	fmt.Printf("KVSP v29+1KiB ROM/RAM\t(rev %s)\n", kvspRevision)
 	fmt.Printf("- Iyokan\t(rev %s)\n", iyokanRevision)
 	fmt.Printf("- Iyokan-L1\t(rev %s)\n", iyokanL1Revision)
 	fmt.Printf("- cahp-ruby\t(rev %s)\n", cahpRubyRevision)
