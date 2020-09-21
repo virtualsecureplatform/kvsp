@@ -219,4 +219,34 @@ This is a research project. We are planning to publish a paper.
 
 ## Code Owners
 
-![Code Owners](code-owners.png)
+- [kvsp](https://github.com/virtualsecureplatform/kvsp/tree/master/kvsp)
+    - @ushitora-anqou
+- [llvm-cahp](https://github.com/virtualsecureplatform/llvm-cahp)
+    - @ushitora-anqou
+    - This is forked from [llvm/llvm-project](https://github.com/llvm/llvm-project)
+- [cahp-rt](https://github.com/virtualsecureplatform/cahp-rt)
+    - @ushitora-anqou
+- [cahp-sim](https://github.com/virtualsecureplatform/cahp-sim)
+    - @ushitora-anqou
+- [Iyokan-L1](https://github.com/virtualsecureplatform/Iyokan-L1)
+    - @naoki9911
+- [cahp-pearl](https://github.com/virtualsecureplatform/cahp-pearl)
+    - @naoki9911
+- [cahp-ruby](https://github.com/virtualsecureplatform/cahp-ruby)
+    - @naoki9911
+- [Iyokan](https://github.com/virtualsecureplatform/Iyokan)
+    - @ushitora-anqou and @naoki9911
+- [TFHEpp](https://github.com/virtualsecureplatform/TFHEpp)
+    - @nindanaoto
+- [cuFHE](https://github.com/virtualsecureplatform/cuFHE)
+    - @nindanaoto and @naoki9911
+    - This is forked from [vernamlab/cuFHE](https://github.com/vernamlab/cuFHE)
+
+## Talks
+
+- カーネル/VM探検隊@関西 10回目 (in Japanese)
+  - [Slides](https://speakerdeck.com/nindanaoto/development-of-virtual-secure-platform)
+  - [Video](https://youtu.be/J-pF4fg3r04?t=6254)
+- 【2019年度未踏／No.15】準同型暗号によるバーチャルセキュアプラットフォームの開発 (in Japanese)
+  - [Video](https://youtu.be/apCbAPt7r3I)
+  - [Report](https://github.com/virtualsecureplatform/MitouDocument)
