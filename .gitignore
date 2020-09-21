@@ -1,3 +1,5 @@
 tfheutil/tfheutil
 kvsp/kvsp
 build
+_*
+.clangd
