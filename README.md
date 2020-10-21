@@ -205,7 +205,7 @@ $ docker run -it -v $PWD:/build -w /build kvsp-build:latest
 
 We published a paper on VSP, which is accepted by USENIX Security Symposium 2021.
 We uploaded its full version onto [arXiv](https://arxiv.org/abs/2010.09410).
-The benchmarks on this paper is based on [KVSP v29](https://github.com/virtualsecureplatform/kvsp/releases/tag/v29).
+The benchmark results on the paper are based on [KVSP v29](https://github.com/virtualsecureplatform/kvsp/releases/tag/v29).
 
 ## Talks
 
