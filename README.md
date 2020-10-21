@@ -13,6 +13,10 @@ a simple interface to use them easily.
 
 ## Quick Start
 
+Demo is on [YouTube](https://www.youtube.com/watch?v=1YsUaZMITR8).
+
+[![Demo for Kyoto Virtual Secure Platform](http://img.youtube.com/vi/1YsUaZMITR8/0.jpg)](http://www.youtube.com/watch?v=1YsUaZMITR8 "Demo for Kyoto Virtual Secure Platform")
+
 Download a KVSP release and unzip it.
 (It has been compiled on Ubuntu 18.04 LTS. If it doesn't work in the following steps,
 please read __Build__ section and try to build KVSP on your own.
@@ -21,7 +25,7 @@ It may be time-consuming, but not so hard.)
 ```
 $ wget 'https://github.com/virtualsecureplatform/kvsp/releases/latest/download/kvsp.tar.gz'
 $ tar xf kvsp.tar.gz
-$ cd kvsp_v18/bin    # The directory's name depends on the file you download.
+$ cd kvsp_v29/bin    # The directory's name depends on the file you download.
 ```
 
 Write some C code...
@@ -83,11 +87,11 @@ once it starts running we can't know if it is still running or has already halte
 because **everything about the code is totally encrypted**!
 
 So, we have to decide how many clock cycles to run `fib.enc` at our choice.
-It is, say, 20.
+It is, say, 30.
 
 ```
 # If you have GPUs use '-g NUM-OF-GPUS' option.
-$ ./kvsp run -bkey bootstrapping.key -i fib.enc -o result.enc -c 20
+$ ./kvsp run -bkey bootstrapping.key -i fib.enc -o result.enc -c 30
 ```
 
 Let's check the result. We'll decrypt `result.enc`:
@@ -100,12 +104,12 @@ f0      false
 ```
 
 `f0` is 'finish flag', which is true iff the program ends.
-So, 20 cycles were not enough. Let's try another 20;
+So, 30 cycles were not enough. Let's try another 30;
 We can resume from the point where we stopped using 'snapshot' file
 (its filename depends on your environment):
 
 ```
-$ ./kvsp resume -c 20 -i kvsp_20200517002413.snapshot -o result.enc -bkey bootstrapping.key
+$ ./kvsp resume -c 30 -i kvsp_20200517002413.snapshot -o result.enc -bkey bootstrapping.key
 ```
 
 Check the result again:
@@ -136,7 +140,6 @@ We ensure that KVSP works on the following cloud services:
 - [AWS EC2 p3.8xlarge](https://aws.amazon.com/jp/ec2/instance-types/p3/)
 - [AWS EC2 p3.2xlarge](https://aws.amazon.com/jp/ec2/instance-types/p3/)
 - [AWS EC2 m5.metal](https://aws.amazon.com/ec2/instance-types/c5/)
-
 
 If you run KVSP locally, prepare a machine with the following devices:
 
@@ -198,24 +201,20 @@ $ docker build -t kvsp-build .
 $ docker run -it -v $PWD:/build -w /build kvsp-build:latest
 ```
 
-## Detailed Explanation on KVSP
+## Papers
 
-Kyoto Virtual Secure Platform (KVSP) enables to execute a standard C program while protecting its code on cloud computing platforms.
+We published a paper on VSP, which is accepted by USENIX Security Symposium 2021.
+We uploaded its full version onto [arXiv](https://arxiv.org/abs/2010.09410).
+The benchmarks on this paper is based on [KVSP v29](https://github.com/virtualsecureplatform/kvsp/releases/tag/v29).
 
-The main idea of KVSP is emulating a CPU on TFHE, which is one kind of fully homomorphic encryption. By using TFHE we can perform logical operations on ciphertexts.
+## Talks
 
-KVSP runs at 4 second per clock on NVIDIA V100, 2.5s on AWS's c5.metal and 1.5s on 8 V100.
-
-KVSP consists of 6 sub-projects:
-
-- Iyokan: A parallel execution engine for logic gates using homomorphic encryption.
-- CAHPv3: Our original ISA for the processor which is emulated in KVSP. Most significant features are 16bit data width and 16/24bit variable instruction width.
-- cahp-diamond: Our original CPU which implements CAHPv3. It consists of about 4K logic gates.
-- llvm-cahp: LLVM backend for CAHPv3.
-- TFHEpp & cuFHE: C++ libraries of TFHE. TFHEpp is a full-scratched library for CPU and cuFHE is modified version of an existing implementation for GPU. They make KVSP faster from a cryptographical point of view.
-- kvsp: KVSP's CUI interface.
-
-This is a research project. We are planning to publish a paper.
+- カーネル/VM探検隊@関西 10回目 (in Japanese)
+  - [Slides](https://speakerdeck.com/nindanaoto/development-of-virtual-secure-platform)
+  - [Video](https://youtu.be/J-pF4fg3r04?t=6254)
+- 【2019年度未踏／No.15】準同型暗号によるバーチャルセキュアプラットフォームの開発 (in Japanese)
+  - [Video](https://youtu.be/apCbAPt7r3I)
+  - [Report](https://github.com/virtualsecureplatform/MitouDocument)
 
 ## Code Owners
 
@@ -241,12 +240,3 @@ This is a research project. We are planning to publish a paper.
 - [cuFHE](https://github.com/virtualsecureplatform/cuFHE)
     - @nindanaoto and @naoki9911
     - This is forked from [vernamlab/cuFHE](https://github.com/vernamlab/cuFHE)
-
-## Talks
-
-- カーネル/VM探検隊@関西 10回目 (in Japanese)
-  - [Slides](https://speakerdeck.com/nindanaoto/development-of-virtual-secure-platform)
-  - [Video](https://youtu.be/J-pF4fg3r04?t=6254)
-- 【2019年度未踏／No.15】準同型暗号によるバーチャルセキュアプラットフォームの開発 (in Japanese)
-  - [Video](https://youtu.be/apCbAPt7r3I)
-  - [Report](https://github.com/virtualsecureplatform/MitouDocument)
