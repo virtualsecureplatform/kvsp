@@ -11,6 +11,9 @@ KVSP consists of many other sub-projects.
 `kvsp` command, which this repository serves, is
 a simple interface to use them easily.
 
+## Paper
+https://arxiv.org/abs/2010.09410
+
 ## Quick Start
 
 Demo is on [YouTube](https://www.youtube.com/watch?v=1YsUaZMITR8).
