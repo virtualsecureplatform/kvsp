@@ -11,8 +11,11 @@ KVSP consists of many other sub-projects.
 `kvsp` command, which this repository serves, is
 a simple interface to use them easily.
 
-## Paper
-https://arxiv.org/abs/2010.09410
+## Papers
+
+We published a paper on VSP, which is accepted by USENIX Security Symposium 2021.
+We uploaded its full version onto [arXiv](https://arxiv.org/abs/2010.09410).
+The benchmark results on the paper are based on [KVSP v29](https://github.com/virtualsecureplatform/kvsp/releases/tag/v29).
 
 ## Quick Start
 
@@ -203,12 +206,6 @@ Note that NVIDIA GPU is NOT necessary to build KVSP.
 $ docker build -t kvsp-build .
 $ docker run -it -v $PWD:/build -w /build kvsp-build:latest
 ```
-
-## Papers
-
-We published a paper on VSP, which is accepted by USENIX Security Symposium 2021.
-We uploaded its full version onto [arXiv](https://arxiv.org/abs/2010.09410).
-The benchmark results on the paper are based on [KVSP v29](https://github.com/virtualsecureplatform/kvsp/releases/tag/v29).
 
 ## Talks
 
