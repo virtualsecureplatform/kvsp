@@ -1,5 +1,7 @@
 # KVSP; Kyoto Virtual Secure Platform
 
+[Official website](https://virtualsecureplatform.github.io/)
+
 KVSP is the first virtual secure platform in the world,
 which makes your life better.
 
@@ -11,11 +13,10 @@ KVSP consists of many other sub-projects.
 `kvsp` command, which this repository serves, is
 a simple interface to use them easily.
 
-## Papers
+## Paper
 
-We published a paper on VSP, which is accepted by USENIX Security Symposium 2021.
+We published a [paper](https://www.usenix.org/conference/usenixsecurity21/presentation/matsuoka) on VSP, which is accepted by USENIX Security Symposium 2021.
 We uploaded its full version onto [arXiv](https://arxiv.org/abs/2010.09410).
-The benchmark results on the paper are based on [KVSP v29](https://github.com/virtualsecureplatform/kvsp/releases/tag/v29).
 
 ## Quick Start
 
@@ -206,15 +207,6 @@ Note that NVIDIA GPU is NOT necessary to build KVSP.
 $ docker build -t kvsp-build .
 $ docker run -it -v $PWD:/build -w /build kvsp-build:latest
 ```
-
-## Talks
-
-- カーネル/VM探検隊@関西 10回目 (in Japanese)
-  - [Slides](https://speakerdeck.com/nindanaoto/development-of-virtual-secure-platform)
-  - [Video](https://youtu.be/J-pF4fg3r04?t=6254)
-- 【2019年度未踏／No.15】準同型暗号によるバーチャルセキュアプラットフォームの開発 (in Japanese)
-  - [Video](https://youtu.be/apCbAPt7r3I)
-  - [Report](https://github.com/virtualsecureplatform/MitouDocument)
 
 ## Code Owners
 
