@@ -3,21 +3,16 @@ SHELL=/bin/bash
 ### Config parameters.
 ENABLE_CUDA=0
 
-all: prepare \
-	 build/cahp-sim \
-	 build/Iyokan \
-	 build/kvsp \
-	 build/share/kvsp/ruby-core.json \
-	 build/share/kvsp/pearl-core.json \
-	 build/llvm-cahp \
-	 build/cahp-rt
-
-prepare:
+all:
+	### ==============================
+	###  Preparing for build
+	### ==============================
 	mkdir -p build/bin
 	mkdir -p build/share/kvsp
 	cp -a share/* build/share/kvsp/
-
-build/kvsp: prepare
+	### ==============================
+	###  Building kvsp
+	### ==============================
 	mkdir -p build/kvsp
 	cd kvsp && \
 		go build -o ../build/kvsp/kvsp -ldflags "\
@@ -32,19 +27,23 @@ build/kvsp: prepare
 			-X main.llvmCahpRevision=$$(git -C ../llvm-cahp rev-parse --short HEAD || echo "unk") \
 			-X main.yosysRevision=$$(git -C ../yosys rev-parse --short HEAD || echo "unk")"
 	cp -a build/kvsp/kvsp build/bin/
-
-build/Iyokan: prepare
+	### ==============================
+	###  Building Iyokan
+	### ==============================
 	mkdir -p build/Iyokan
 	cd build/Iyokan && \
 		cmake \
 			-DCMAKE_BUILD_TYPE="Release" \
 			-DIYOKAN_ENABLE_CUDA=$(ENABLE_CUDA) \
+			-DCMAKE_C_COMPILER=clang \
+			-DCMAKE_CXX_COMPILER=clang++ \
 			../../Iyokan && \
 		$(MAKE) iyokan iyokan-packet
 	cp -a build/Iyokan/bin/iyokan build/bin/
 	cp -a build/Iyokan/bin/iyokan-packet build/bin/
-
-build/cahp-sim: prepare
+	### ==============================
+	###  Building cahp-sim
+	### ==============================
 	mkdir -p build/cahp-sim
 	cd build/cahp-sim && \
 		cmake \
@@ -52,43 +51,35 @@ build/cahp-sim: prepare
 			../../cahp-sim && \
 		$(MAKE) cahp-sim
 	cp -a build/cahp-sim/src/cahp-sim build/bin/
-
-build/cahp-ruby: prepare
-	cp -a cahp-ruby build/
-	cd build/cahp-ruby && sbt run
-
-# NOTE: build/cahp-pearl is "fake" dependency;
-# parallel `sbt run` may cause some problems about file lock.
-build/cahp-pearl: prepare build/cahp-ruby
-	cp -a cahp-pearl build/
-	cd build/cahp-pearl && sbt run
-
-build/yosys: prepare
+	### ==============================
+	###  Building Yosys
+	### ==============================
 	cp -a yosys build/
 	cd build/yosys && $(MAKE)
-
-build/Iyokan-L1: prepare
+	### ==============================
+	###  Building Iyokan-L1
+	### ==============================
 	cp -a Iyokan-L1 build/
 	cd build/Iyokan-L1 && dotnet build
-
-build/cahp-ruby/vsp-core-ruby.json: prepare build/cahp-ruby build/yosys
+	### ==============================
+	###  Building cahp-ruby
+	### ==============================
+	cp -a cahp-ruby build/
+	cd build/cahp-ruby && sbt run
 	cd build/cahp-ruby && \
 		../yosys/yosys build.ys
-
-# NOTE: build/cahp-pearl/vsp-core-pearl.json is "fake" dependency;
-# Without this the builds for processors will run in parallel
-# to consume too much memory.
-build/cahp-pearl/vsp-core-pearl.json: prepare build/cahp-pearl build/yosys build/cahp-ruby/vsp-core-ruby.json
+	dotnet run -p build/Iyokan-L1/ -c Release build/cahp-ruby/vsp-core-ruby.json build/share/kvsp/ruby-core.json
+	### ==============================
+	###  Building cahp-pearl
+	### ==============================
+	cp -a cahp-pearl build/
+	cd build/cahp-pearl && sbt run
 	cd build/cahp-pearl && \
 		../yosys/yosys build.ys
-
-build/share/kvsp/ruby-core.json: prepare build/cahp-ruby/vsp-core-ruby.json build/Iyokan-L1
-	dotnet run -p build/Iyokan-L1/ -c Release build/cahp-ruby/vsp-core-ruby.json build/share/kvsp/ruby-core.json
-
-build/share/kvsp/pearl-core.json: prepare build/cahp-pearl/vsp-core-pearl.json build/Iyokan-L1
 	dotnet run -p build/Iyokan-L1/ -c Release build/cahp-pearl/vsp-core-pearl.json build/share/kvsp/pearl-core.json
-
-build/llvm-cahp: prepare
+	### ==============================
+	###  Building llvm-cahp
+	### ==============================
 	mkdir -p build/llvm-cahp
 	cd build/llvm-cahp && \
 		cmake \
@@ -99,12 +90,14 @@ build/llvm-cahp: prepare
 			../../llvm-cahp/llvm && \
 		$(MAKE)
 	cp -a build/llvm-cahp/bin/* build/bin/
-
-build/cahp-rt: prepare build/llvm-cahp
+	### ==============================
+	###  Building cahp-rt
+	### ==============================
 	cp -a cahp-rt build/
 	cd build/cahp-rt && CC=../llvm-cahp/bin/clang $(MAKE)
 	mkdir -p build/share/kvsp/cahp-rt
 	cd build/cahp-rt && \
 		cp -a crt0.o libc.a cahp.lds ../share/kvsp/cahp-rt/
-
-.PHONY: all prepare
+	### ==============================
+	###  Build successfully completed!
+	### ==============================
