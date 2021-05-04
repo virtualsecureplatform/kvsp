@@ -3,13 +3,20 @@ SHELL=/bin/bash
 ### Config parameters.
 ENABLE_CUDA=0
 
-all:
+all: step10_cahp-rt
+	### ==============================
+	###  Build successfully completed!
+	### ==============================
+
+step1_prepare:
 	### ==============================
 	###  Preparing for build
 	### ==============================
 	mkdir -p build/bin
 	mkdir -p build/share/kvsp
 	cp -a share/* build/share/kvsp/
+
+step2_kvsp: step1_prepare
 	### ==============================
 	###  Building kvsp
 	### ==============================
@@ -27,6 +34,8 @@ all:
 			-X main.llvmCahpRevision=$$(git -C ../llvm-cahp rev-parse --short HEAD || echo "unk") \
 			-X main.yosysRevision=$$(git -C ../yosys rev-parse --short HEAD || echo "unk")"
 	cp -a build/kvsp/kvsp build/bin/
+
+step3_iyokan: step2_kvsp
 	### ==============================
 	###  Building Iyokan
 	### ==============================
@@ -41,6 +50,8 @@ all:
 		$(MAKE) iyokan iyokan-packet
 	cp -a build/Iyokan/bin/iyokan build/bin/
 	cp -a build/Iyokan/bin/iyokan-packet build/bin/
+
+step4_cahp-sim: step3_iyokan
 	### ==============================
 	###  Building cahp-sim
 	### ==============================
@@ -51,16 +62,22 @@ all:
 			../../cahp-sim && \
 		$(MAKE) cahp-sim
 	cp -a build/cahp-sim/src/cahp-sim build/bin/
+
+step5_yosys: step4_cahp-sim
 	### ==============================
 	###  Building Yosys
 	### ==============================
 	cp -a yosys build/
 	cd build/yosys && $(MAKE)
+
+step6_iyokan-l1: step5_yosys
 	### ==============================
 	###  Building Iyokan-L1
 	### ==============================
 	cp -a Iyokan-L1 build/
 	cd build/Iyokan-L1 && dotnet build
+
+step7_cahp-ruby: step6_iyokan-l1
 	### ==============================
 	###  Building cahp-ruby
 	### ==============================
@@ -69,6 +86,8 @@ all:
 	cd build/cahp-ruby && \
 		../yosys/yosys build.ys
 	dotnet run -p build/Iyokan-L1/ -c Release build/cahp-ruby/vsp-core-ruby.json build/share/kvsp/ruby-core.json
+
+step8_cahp-pearl: step7_cahp-ruby
 	### ==============================
 	###  Building cahp-pearl
 	### ==============================
@@ -77,6 +96,8 @@ all:
 	cd build/cahp-pearl && \
 		../yosys/yosys build.ys
 	dotnet run -p build/Iyokan-L1/ -c Release build/cahp-pearl/vsp-core-pearl.json build/share/kvsp/pearl-core.json
+
+step9_llvm-cahp: step8_cahp-pearl
 	### ==============================
 	###  Building llvm-cahp
 	### ==============================
@@ -90,6 +111,8 @@ all:
 			../../llvm-cahp/llvm && \
 		$(MAKE)
 	cp -a build/llvm-cahp/bin/* build/bin/
+
+step10_cahp-rt: step9_llvm-cahp
 	### ==============================
 	###  Building cahp-rt
 	### ==============================
@@ -98,6 +121,4 @@ all:
 	mkdir -p build/share/kvsp/cahp-rt
 	cd build/cahp-rt && \
 		cp -a crt0.o libc.a cahp.lds ../share/kvsp/cahp-rt/
-	### ==============================
-	###  Build successfully completed!
-	### ==============================
+
