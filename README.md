@@ -158,12 +158,12 @@ If you run KVSP locally, prepare a machine with the following devices:
 
 ## Dependencies
 
-We use Ubuntu 18.04 in the development. Following commands setup the AWS instances.
+We are using Ubuntu 20.04 in the development of v30 and later. Following commands setup the AWS instances.
 If you uses p3 instances, We highly recommend to increase EBS (Storage) size to 12 GB because intermediate files will be some GBs orders.
 
 p3 instances
 ```
-sudo apt update&&sudo apt upgrade -y&&sudo apt install -y libgoogle-perftools-dev libomp-dev nvidia-driver-440&&sudo reboot
+sudo apt update&&sudo apt upgrade -y&&sudo apt install -y libgoogle-perftools-dev libomp-dev nvidia-driver-460&&sudo reboot
 ```
 This commands includes reboot at last to enable a GPU driver.
 
