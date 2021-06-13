@@ -1,17 +1,21 @@
 # KVSP; Kyoto Virtual Secure Platform
 
-[Official website](https://virtualsecureplatform.github.io/)
+[[Official website](https://virtualsecureplatform.github.io/)]
+[[Paper on arXiv](https://arxiv.org/abs/2010.09410)]
+[[Brief Japanese description on KVSP](https://anqou.net/poc/2019/10/18/post-3106/)]
 
-KVSP is the first virtual secure platform in the world,
-which makes your life better.
+Virtual Secure Platform (VSP) provides a toolchain to run encrypted C programs without decryption.
 
-On VSP you can run your encrypted code as is.
-No need to decrypt while running. See [here](https://anqou.net/poc/2019/10/18/post-3106/)
-for more details (in Japanese).
+VSP is the first comprehensive platform that implements
+a multi-opcode general-purpose sequential processor
+over Fully Homomorphic Encryption (FHE) for Secure Multi-Party Computation (SMPC).
+VSP protects both the data and functions on which the data are evaluated
+from the adversary in a secure computation offloading situation like cloud computing.
 
-KVSP consists of many other sub-projects.
-`kvsp` command, which this repository serves, is
-a simple interface to use them easily.
+KVSP (Kyoto Virtual Secure Platform) is the first implementation
+of VSP. KVSP consists of many other sub-projects.
+The `kvsp` command, which this repository serves, is a
+simple interface to use them easily.
 
 ## Paper
 
@@ -24,8 +28,9 @@ Demo is on [YouTube](https://www.youtube.com/watch?v=1YsUaZMITR8).
 
 [![Demo for Kyoto Virtual Secure Platform](http://img.youtube.com/vi/1YsUaZMITR8/0.jpg)](http://www.youtube.com/watch?v=1YsUaZMITR8 "Demo for Kyoto Virtual Secure Platform")
 
-Download a KVSP release and unzip it.
-(It has been compiled on Ubuntu 18.04 LTS. If it doesn't work in the following steps,
+Download a KVSP release from [here](https://github.com/virtualsecureplatform/kvsp/releases/latest) and unzip it.
+(It has been compiled on Ubuntu 20.04 LTS and CUDA 11.1.1.
+If it doesn't work in the following steps,
 please read __Build__ section and try to build KVSP on your own.
 It may be time-consuming, but not so hard.)
 
@@ -153,19 +158,19 @@ If you run KVSP locally, prepare a machine with the following devices:
 - Intel CPU with AVX2 support (e.g. Intel Core i7-8700)
 - 16GB RAM
 - NVIDIA GPU (not required but highly recommended)
-    - Only NVIDIA Tesla V100 is supported.
+    - Only NVIDIA V100 and A100 are supported.
     - Other GPUs _may_ work but are not supported.
 
 ## Dependencies
 
-We are using Ubuntu 20.04 in the development of v30 and later. Following commands setup the AWS instances.
-If you uses p3 instances, We highly recommend to increase EBS (Storage) size to 12 GB because intermediate files will be some GBs orders.
+We are using Ubuntu 20.04 LTS in the development of v30 and later.
+Following commands setup the AWS instances.
+If you use AWS p3 instances, we highly recommend to increase EBS (Storage) size to 12 GB because intermediate files will be some GBs orders.
 
-p3 instances
+p3 instances (This includes reboot at last to enable a GPU driver.)
 ```
 sudo apt update&&sudo apt upgrade -y&&sudo apt install -y libgoogle-perftools-dev libomp-dev nvidia-driver-460&&sudo reboot
 ```
-This commands includes reboot at last to enable a GPU driver.
 
 c5.metal
 ```
@@ -189,18 +194,18 @@ $ git submodule update --init --recursive
 Build KVSP:
 
 ```
-$ make  # It may take a while.
+$ make -j$(nproc) # It may take a while.
 ```
 
 Use option `ENABLE_CUDA` if you build KVSP with GPU support:
 
 ```
-$ make ENABLE_CUDA=1 CUDACXX="/usr/local/cuda/bin/nvcc" CUDAHOSTCXX="/usr/bin/clang-8"
+$ make -j$(nproc) ENABLE_CUDA=1 CUDACXX="/usr/local/cuda/bin/nvcc" CUDAHOSTCXX="/usr/bin/clang-8"
 ```
 
 ## Build KVSP Using Docker
 
-Based on Ubuntu 18.04 LTS with NVIDIA CUDA image.
+Based on Ubuntu 20.04 LTS with NVIDIA CUDA 11.1.1.
 Note that NVIDIA GPU is NOT necessary to build KVSP.
 
 ```
