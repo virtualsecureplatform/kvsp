@@ -16,6 +16,13 @@ case "$1" in
         docker run -it -v $PWD:/build -w /build kvsp-build:latest
         ;;
 
+    test )
+        cd Iyokan && \
+            ruby test.rb --skip-preface ../build/bin fast && \
+            ruby test.rb --skip-preface ../build/bin cufhe-cahp-ruby-09 && \
+            rm _test*
+        ;;
+
     tag )
         [ $# -eq 2 ] || ( echo "Usage: $0 tag VERSION"; exit 1 )
         git tag -s "v$2" -m "v$2"
