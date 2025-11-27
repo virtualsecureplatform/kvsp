@@ -22,6 +22,10 @@ step2_kvsp: step1_prepare
 	### ==============================
 	mkdir -p build/kvsp
 	cd kvsp && \
+		if [ ! -f go.mod ]; then \
+			go mod init github.com/kvsp/kvsp && \
+			go mod tidy; \
+		fi && \
 		go build -o ../build/kvsp/kvsp -ldflags "\
 			-X main.kvspVersion=$$(git describe --tags --abbrev=0 || echo "unk") \
 			-X main.kvspRevision=$$(git rev-parse --short HEAD || echo "unk") \
