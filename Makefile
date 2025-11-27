@@ -69,7 +69,7 @@ step5_yosys: step4_cahp-sim
 	### ==============================
 	###  Building Yosys
 	### ==============================
-	cp -a yosys build/
+	if [ ! -e "./build/yosys" ]; then ln -s ${PWD}/yosys build/yosys; fi
 	cd build/yosys && $(MAKE)
 
 step6_iyokan-l1: step5_yosys

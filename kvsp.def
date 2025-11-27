@@ -1,0 +1,107 @@
+Bootstrap: docker
+From: nvidia/cuda:13.0.2-devel-ubuntu24.04
+
+%labels
+    Author kvsp
+    Version 1.0
+    Description Singularity container for building KVSP (Kyoto Virtual Secure Platform)
+
+%environment
+    export DEBIAN_FRONTEND=noninteractive
+    export PATH=/opt/kvsp/build/bin:$PATH
+    export CUDA_HOME=/usr/local/cuda
+    export PATH=$CUDA_HOME/bin:$PATH
+    export LD_LIBRARY_PATH=$CUDA_HOME/lib64:$LD_LIBRARY_PATH
+
+%post
+    # Set non-interactive frontend
+    export DEBIAN_FRONTEND=noninteractive
+
+    # Update and install basic build dependencies
+    apt-get update && apt-get install -y \
+        build-essential \
+        git \
+        curl \
+        wget \
+        software-properties-common \
+        openjdk-11-jre \
+        cmake \
+        clang \
+        bison \
+        flex \
+        libreadline-dev \
+        gawk \
+        tcl-dev \
+        libffi-dev \
+        graphviz \
+        xdot \
+        pkg-config \
+        python3 \
+        python3-pip \
+        libboost-system-dev \
+        libboost-python-dev \
+        libboost-filesystem-dev \
+        zlib1g-dev \
+        libgoogle-perftools-dev \
+        libomp-dev \
+        gnupg \
+        ca-certificates \
+        apt-transport-https
+
+    # Install Go (Ubuntu 24.04 has recent Go in repos)
+    apt-get install -y golang-go
+
+    # Install .NET SDK (use .NET 8.0 for Ubuntu 24.04 as 3.1 is EOL)
+    # Note: Iyokan-L1 may need adaptation for newer .NET versions
+    # If .NET 3.1 is strictly required, you may need to use a different approach
+    wget https://packages.microsoft.com/config/ubuntu/24.04/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
+    dpkg -i packages-microsoft-prod.deb
+    rm packages-microsoft-prod.deb
+    apt-get update && apt-get install -y dotnet-sdk-8.0
+
+    # Install SBT (Scala Build Tool) - updated repository
+    echo "deb https://repo.scala-sbt.org/scalasbt/debian all main" | tee /etc/apt/sources.list.d/sbt.list
+    echo "deb https://repo.scala-sbt.org/scalasbt/debian /" | tee -a /etc/apt/sources.list.d/sbt.list
+    curl -sL "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x2EE0EA64E40A89B84B2DF73499E82A75642AC823" | gpg --dearmor | tee /etc/apt/trusted.gpg.d/sbt.gpg > /dev/null
+    apt-get update && apt-get install -y sbt
+
+    # Clean up apt cache
+    apt-get clean
+    rm -rf /var/lib/apt/lists/*
+
+%runscript
+    echo "KVSP Build Container"
+    echo "===================="
+    echo "To build KVSP:"
+    echo "  1. Bind mount your kvsp source directory"
+    echo "  2. Run: make -j\$(nproc) ENABLE_CUDA=1 CUDACXX=/usr/local/cuda/bin/nvcc"
+    echo ""
+    echo "Example:"
+    echo "  singularity exec --nv --bind /path/to/kvsp:/opt/kvsp kvsp.sif bash"
+    echo "  cd /opt/kvsp && make -j\$(nproc) ENABLE_CUDA=1"
+    exec /bin/bash "$@"
+
+%help
+    This Singularity container provides the build environment for KVSP
+    (Kyoto Virtual Secure Platform) - a platform for running encrypted
+    C programs using fully homomorphic encryption (FHE).
+
+    Build Requirements:
+    - NVIDIA GPU with CUDA support (optional but recommended)
+    - At least 16GB RAM
+    - At least 20GB disk space for build artifacts
+
+    Usage:
+    1. Build the container:
+       singularity build kvsp.sif kvsp.def
+
+    2. Clone and prepare KVSP:
+       git clone https://github.com/virtualsecureplatform/kvsp.git
+       cd kvsp
+       git submodule update --init --recursive
+
+    3. Run the build:
+       singularity exec --nv kvsp.sif make -j$(nproc) ENABLE_CUDA=1 CUDACXX=/usr/local/cuda/bin/nvcc
+
+    For CPU-only build (no CUDA):
+       singularity exec kvsp.sif make -j$(nproc)

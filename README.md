@@ -213,6 +213,22 @@ $ docker build -t kvsp-build .
 $ docker run -it -v $PWD:/build -w /build kvsp-build:latest
 ```
 
+## Build KVSP Using Singularity (CPU-only)
+
+You can build a CPU-only version of KVSP using Singularity.
+
+First, build the Singularity container from the definition file:
+
+```
+$ singularity build kvsp.sif kvsp.def
+```
+
+Then, build KVSP inside the container:
+
+```
+$ singularity exec --bind $(pwd):$(pwd) --pwd $(pwd) --writable-tmpfs kvsp.sif make -j8
+```
+
 ## Code Owners
 
 - [kvsp](https://github.com/virtualsecureplatform/kvsp/tree/master/kvsp)

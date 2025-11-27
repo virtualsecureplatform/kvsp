@@ -3,3 +3,5 @@ kvsp/kvsp
 build
 _*
 .clangd
+*.sif
+kvsp/go.*
