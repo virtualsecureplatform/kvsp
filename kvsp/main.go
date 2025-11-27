@@ -595,7 +595,7 @@ func doGenbkey() error {
 		return errors.New("Specify -i and -o options properly")
 	}
 
-	_, err = runIyokanPacket("genbkey",
+	_, err = runIyokanPacket("genevalkey",
 		"--in", *inputFileName,
 		"--out", *outputFileName)
 
@@ -698,7 +698,7 @@ func runIyokanTFHE(nClocks uint, bkeyFileName string, outputFileName string, sna
 
 	args := []string{
 		"tfhe",
-		"--bkey", bkeyFileName,
+		"--evalkey", bkeyFileName,
 		"-o", outputFileName,
 		"-c", fmt.Sprint(nClocks),
 		"--snapshot", snapshotFileName,

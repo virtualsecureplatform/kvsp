@@ -44,8 +44,6 @@ step3_iyokan: step2_kvsp
 		cmake \
 			-DCMAKE_BUILD_TYPE="Release" \
 			-DIYOKAN_ENABLE_CUDA=$(ENABLE_CUDA) \
-			-DCMAKE_C_COMPILER=clang \
-			-DCMAKE_CXX_COMPILER=clang++ \
 			../../Iyokan && \
 		$(MAKE) iyokan iyokan-packet
 	cp -a build/Iyokan/bin/iyokan build/bin/
@@ -85,7 +83,7 @@ step7_cahp-ruby: step6_iyokan-l1
 	cd build/cahp-ruby && sbt run
 	cd build/cahp-ruby && \
 		../yosys/yosys build.ys
-	dotnet run -p build/Iyokan-L1/ -c Release build/cahp-ruby/vsp-core-ruby.json build/share/kvsp/ruby-core.json
+	dotnet run --project build/Iyokan-L1/ -c Release build/cahp-ruby/vsp-core-ruby.json build/share/kvsp/ruby-core.json
 
 step8_cahp-pearl: step7_cahp-ruby
 	### ==============================
@@ -95,7 +93,7 @@ step8_cahp-pearl: step7_cahp-ruby
 	cd build/cahp-pearl && sbt run
 	cd build/cahp-pearl && \
 		../yosys/yosys build.ys
-	dotnet run -p build/Iyokan-L1/ -c Release build/cahp-pearl/vsp-core-pearl.json build/share/kvsp/pearl-core.json
+	dotnet run --project build/Iyokan-L1/ -c Release build/cahp-pearl/vsp-core-pearl.json build/share/kvsp/pearl-core.json
 
 step9_llvm-cahp: step8_cahp-pearl
 	### ==============================
