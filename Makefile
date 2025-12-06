@@ -24,6 +24,7 @@ step2_kvsp: step1_prepare
 	cd kvsp && \
 		if [ ! -f go.mod ]; then \
 			go mod init github.com/kvsp/kvsp && \
+			go get github.com/BurntSushi/toml@latest && \
 			go mod tidy; \
 		fi && \
 		go build -o ../build/kvsp/kvsp -ldflags "\
