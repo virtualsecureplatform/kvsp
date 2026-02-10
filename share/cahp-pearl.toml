@@ -1,5 +1,5 @@
 [[file]]
-type = "iyokanl1-json"
+type = "yosys-json"
 path = "pearl-core.json"
 name = "core"
 

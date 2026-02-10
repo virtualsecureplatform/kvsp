@@ -1,5 +1,5 @@
 [[file]]
-type = "iyokanl1-json"
+type = "yosys-json"
 path = "ruby-core.json"
 name = "core"
 

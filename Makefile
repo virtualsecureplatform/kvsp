@@ -88,7 +88,7 @@ step7_cahp-ruby: step6_iyokan-l1
 	cd build/cahp-ruby && sbt run
 	cd build/cahp-ruby && \
 		../yosys/yosys build.ys
-	dotnet run --project build/Iyokan-L1/ -c Release build/cahp-ruby/vsp-core-ruby.json build/share/kvsp/ruby-core.json
+	cp build/cahp-ruby/vsp-core-ruby.json build/share/kvsp/ruby-core.json
 
 step8_cahp-pearl: step7_cahp-ruby
 	### ==============================
@@ -98,7 +98,7 @@ step8_cahp-pearl: step7_cahp-ruby
 	cd build/cahp-pearl && sbt run
 	cd build/cahp-pearl && \
 		../yosys/yosys build.ys
-	dotnet run --project build/Iyokan-L1/ -c Release build/cahp-pearl/vsp-core-pearl.json build/share/kvsp/pearl-core.json
+	cp build/cahp-pearl/vsp-core-pearl.json build/share/kvsp/pearl-core.json
 
 step9_llvm-cahp: step8_cahp-pearl
 	### ==============================
