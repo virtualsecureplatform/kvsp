@@ -148,9 +148,7 @@ We ensure that KVSP works on the following cloud services:
 
 - [さくらインターネット 高火力コンピューティング Tesla V100（32GB）モデル](https://www.sakura.ad.jp/koukaryoku/)
 - [GCP n1-standard-96 with 8 x NVIDIA Tesla V100](https://cloud.google.com/compute/docs/machine-types?hl=ja#n1_standard_machine_types)
-- [AWS EC2 p3.16xlarge](https://aws.amazon.com/jp/ec2/instance-types/p3/)
-- [AWS EC2 p3.8xlarge](https://aws.amazon.com/jp/ec2/instance-types/p3/)
-- [AWS EC2 p3.2xlarge](https://aws.amazon.com/jp/ec2/instance-types/p3/)
+- [AWS EC2 p4d.24xlarge](https://aws.amazon.com/jp/ec2/instance-types/p4/)
 - [AWS EC2 m5.metal](https://aws.amazon.com/ec2/instance-types/c5/)
 
 If you run KVSP locally, prepare a machine with the following devices:
@@ -158,7 +156,7 @@ If you run KVSP locally, prepare a machine with the following devices:
 - Intel CPU with AVX2 support (e.g. Intel Core i7-8700)
 - 16GB RAM
 - NVIDIA GPU (not required but highly recommended)
-    - Only NVIDIA V100 and A100 are supported.
+    - Only NVIDIA A100 is supported.
     - Other GPUs _may_ work but are not supported.
 
 ## Dependencies
