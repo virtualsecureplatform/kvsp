@@ -43,7 +43,6 @@ case "$1" in
         strip "$destdir"/bin/* || true
         find \
             Iyokan \
-            Iyokan-L1 \
             cahp-pearl \
             cahp-rt \
             cahp-ruby \

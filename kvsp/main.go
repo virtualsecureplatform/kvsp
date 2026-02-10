@@ -725,7 +725,6 @@ func runIyokanTFHE(nClocks uint, bkeyFileName string, outputFileName string, sna
 var kvspVersion = "unk"
 var kvspRevision = "unk"
 var iyokanRevision = "unk"
-var iyokanL1Revision = "unk"
 var cahpRubyRevision = "unk"
 var cahpPearlRevision = "unk"
 var cahpRtRevision = "unk"
@@ -736,7 +735,6 @@ var yosysRevision = "unk"
 func doVersion() error {
 	fmt.Printf("KVSP %s\t(rev %s)\n", kvspVersion, kvspRevision)
 	fmt.Printf("- Iyokan\t(rev %s)\n", iyokanRevision)
-	fmt.Printf("- Iyokan-L1\t(rev %s)\n", iyokanL1Revision)
 	fmt.Printf("- cahp-ruby\t(rev %s)\n", cahpRubyRevision)
 	fmt.Printf("- cahp-pearl\t(rev %s)\n", cahpPearlRevision)
 	fmt.Printf("- cahp-rt\t(rev %s)\n", cahpRtRevision)

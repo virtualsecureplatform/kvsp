@@ -240,8 +240,6 @@ $ singularity exec --bind $(pwd):$(pwd) --pwd $(pwd) --writable-tmpfs kvsp.sif m
     - @ushitora-anqou
 - [cahp-sim](https://github.com/virtualsecureplatform/cahp-sim)
     - @ushitora-anqou
-- [Iyokan-L1](https://github.com/virtualsecureplatform/Iyokan-L1)
-    - @naoki9911
 - [cahp-pearl](https://github.com/virtualsecureplatform/cahp-pearl)
     - @naoki9911
 - [cahp-ruby](https://github.com/virtualsecureplatform/cahp-ruby)

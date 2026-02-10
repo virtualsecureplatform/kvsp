@@ -31,7 +31,6 @@ step2_kvsp: step1_prepare
 			-X main.kvspVersion=$$(git describe --tags --abbrev=0 || echo "unk") \
 			-X main.kvspRevision=$$(git rev-parse --short HEAD || echo "unk") \
 			-X main.iyokanRevision=$$(git -C ../Iyokan rev-parse --short HEAD || echo "unk") \
-			-X main.iyokanL1Revision=$$(git -C ../Iyokan-L1 rev-parse --short HEAD || echo "unk") \
 			-X main.cahpRubyRevision=$$(git -C ../cahp-ruby rev-parse --short HEAD || echo "unk") \
 			-X main.cahpPearlRevision=$$(git -C ../cahp-pearl rev-parse --short HEAD || echo "unk") \
 			-X main.cahpRtRevision=$$(git -C ../cahp-rt rev-parse --short HEAD || echo "unk") \
@@ -73,14 +72,7 @@ step5_yosys: step4_cahp-sim
 	if [ ! -e "./build/yosys" ]; then ln -s ${PWD}/yosys build/yosys; fi
 	cd build/yosys && $(MAKE)
 
-step6_iyokan-l1: step5_yosys
-	### ==============================
-	###  Building Iyokan-L1
-	### ==============================
-	cp -a Iyokan-L1 build/
-	cd build/Iyokan-L1 && dotnet build
-
-step7_cahp-ruby: step6_iyokan-l1
+step7_cahp-ruby: step5_yosys
 	### ==============================
 	###  Building cahp-ruby
 	### ==============================
