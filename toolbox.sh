@@ -31,7 +31,7 @@ case "$1" in
     rebuild-kvsp )
         rm -rf build/kvsp
         docker build -t kvsp-build .
-        docker run -it -v $PWD:/build -w /build kvsp-build:latest make step2_kvsp
+        docker run -it -v $PWD:/build -w /build kvsp-build:latest make kvsp
         build/kvsp/kvsp version
         ;;
 
