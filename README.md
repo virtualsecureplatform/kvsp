@@ -247,4 +247,4 @@ $ singularity exec --bind $(pwd):$(pwd) --pwd $(pwd) --writable-tmpfs kvsp.sif m
 - [TFHEpp](https://github.com/virtualsecureplatform/TFHEpp)
     - @nindanaoto
 - [cuFHEpp](https://github.com/virtualsecureplatform/cuFHEpp)
-    - @nindanaoto and @naoki9911
+    - @nindanaoto
