@@ -68,7 +68,7 @@ case "$1" in
     release )
         [ $# -eq 2 ] || ( echo "Usage: $0 release VERSION"; exit 1 )
         git push --tags
-        EDITOR=nano hub release create -a kvsp.tar.gz "v$2"
+        gh release create "v$2" kvsp.tar.gz --title "v$2"
         ;;
 
     * )
