@@ -4,9 +4,9 @@ SHELL=/bin/bash
 ENABLE_CUDA=0
 BUILDDIR := build
 
-.PHONY: all prepare kvsp iyokan cahp-sim yosys cahp-ruby cahp-pearl llvm-cahp cahp-rt clean
+.PHONY: all prepare kvsp iyokan iyokan-avx2 iyokan-avx512 cahp-sim yosys cahp-ruby cahp-pearl llvm-cahp cahp-rt clean
 
-all: kvsp iyokan cahp-sim cahp-ruby cahp-pearl cahp-rt
+all: kvsp iyokan-avx2 iyokan-avx512 cahp-sim cahp-ruby cahp-pearl cahp-rt
 	@echo "Build successfully completed!"
 
 prepare:
@@ -36,17 +36,34 @@ kvsp: prepare
 			-X main.yosysRevision=$$(git -C ../yosys rev-parse --short HEAD || echo "unk")"
 	cp -a $(BUILDDIR)/kvsp/kvsp $(BUILDDIR)/bin/
 
-iyokan: prepare
-	@echo "Building Iyokan..."
-	mkdir -p $(BUILDDIR)/Iyokan
-	cd $(BUILDDIR)/Iyokan && \
+iyokan: iyokan-avx512
+
+iyokan-avx2: prepare
+	@echo "Building Iyokan (AVX2, -march=x86-64-v3, USE_AVX512=OFF)..."
+	mkdir -p $(BUILDDIR)/Iyokan-avx2
+	cd $(BUILDDIR)/Iyokan-avx2 && \
+		if [ ! -f CMakeCache.txt ]; then cmake \
+			-DCMAKE_BUILD_TYPE="Release" \
+			-DIYOKAN_ENABLE_CUDA=0 \
+			-DIYOKAN_MARCH=x86-64-v3 \
+			-DUSE_AVX512=OFF \
+			../../Iyokan; fi && \
+		$(MAKE) iyokan iyokan-packet
+	cp -a $(BUILDDIR)/Iyokan-avx2/bin/iyokan $(BUILDDIR)/bin/iyokan-avx2
+	cp -a $(BUILDDIR)/Iyokan-avx2/bin/iyokan-packet $(BUILDDIR)/bin/iyokan-packet-avx2
+
+iyokan-avx512: prepare
+	@echo "Building Iyokan (AVX512, -march=native, USE_AVX512=ON)..."
+	mkdir -p $(BUILDDIR)/Iyokan-avx512
+	cd $(BUILDDIR)/Iyokan-avx512 && \
 		if [ ! -f CMakeCache.txt ]; then cmake \
 			-DCMAKE_BUILD_TYPE="Release" \
 			-DIYOKAN_ENABLE_CUDA=$(ENABLE_CUDA) \
+			-DUSE_AVX512=ON \
 			../../Iyokan; fi && \
 		$(MAKE) iyokan iyokan-packet
-	cp -a $(BUILDDIR)/Iyokan/bin/iyokan $(BUILDDIR)/bin/
-	cp -a $(BUILDDIR)/Iyokan/bin/iyokan-packet $(BUILDDIR)/bin/
+	cp -a $(BUILDDIR)/Iyokan-avx512/bin/iyokan $(BUILDDIR)/bin/iyokan
+	cp -a $(BUILDDIR)/Iyokan-avx512/bin/iyokan-packet $(BUILDDIR)/bin/iyokan-packet
 
 cahp-sim: prepare
 	@echo "Building cahp-sim..."
