@@ -44,7 +44,7 @@ iyokan-avx2: prepare
 	cd $(BUILDDIR)/Iyokan-avx2 && \
 		if [ ! -f CMakeCache.txt ]; then cmake \
 			-DCMAKE_BUILD_TYPE="Release" \
-			-DIYOKAN_ENABLE_CUDA=0 \
+			-DIYOKAN_ENABLE_CUDA=$(ENABLE_CUDA) \
 			-DIYOKAN_MARCH=x86-64-v3 \
 			-DUSE_AVX512=OFF \
 			../../Iyokan; fi && \
