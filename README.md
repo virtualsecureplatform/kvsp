@@ -150,10 +150,12 @@ We ensure that KVSP works on the following cloud services:
 - [GCP n1-standard-96 with 8 x NVIDIA Tesla V100](https://cloud.google.com/compute/docs/machine-types?hl=ja#n1_standard_machine_types)
 - [AWS EC2 p4d.24xlarge](https://aws.amazon.com/jp/ec2/instance-types/p4/)
 - [AWS EC2 m5.metal](https://aws.amazon.com/ec2/instance-types/c5/)
+- [Kyoto University's super computer Gardenia (System G)](https://www.iimc.kyoto-u.ac.jp/en/services/comp/supercomputer/system/specification)
 
 If you run KVSP locally, prepare a machine with the following devices:
 
 - Intel CPU with AVX2 support (e.g. Intel Core i7-8700)
+    - AVX-512 is recommended
 - 16GB RAM
 - NVIDIA GPU (not required but highly recommended)
     - Only NVIDIA A100 is supported.
