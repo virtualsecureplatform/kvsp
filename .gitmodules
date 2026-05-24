@@ -19,3 +19,6 @@
 [submodule "cahp-pearl"]
 	path = cahp-pearl
 	url = https://github.com/virtualsecureplatform/cahp-pearl.git
+[submodule "Alexandrite"]
+	path = Alexandrite
+	url = https://github.com/virtualsecureplatform/Alexandrite.git

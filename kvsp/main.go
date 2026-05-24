@@ -19,9 +19,60 @@ import (
 
 var flagVerbose bool
 
-const defaultCAHPProc = "ruby"
-const defaultROMSize = 512
-const defaultRAMSize = 512
+const defaultCPU = "ruby"
+const ramBaseAddr = 0x10000
+
+type cpuProfile struct {
+	Name               string
+	RuntimeName        string
+	BlueprintName      string
+	ROMSize            uint64
+	RAMSize            uint64
+	PointerWidth       int
+	StackAlign         int
+	StackPointerOffset uint64
+	RegCount           int
+	RegWidth           int
+}
+
+var cpuProfiles = map[string]cpuProfile{
+	"ruby": {
+		Name:               "ruby",
+		RuntimeName:        "CAHP_RT",
+		BlueprintName:      "IYOKAN-BLUEPRINT-RUBY",
+		ROMSize:            512,
+		RAMSize:            512,
+		PointerWidth:       2,
+		StackAlign:         2,
+		StackPointerOffset: 512 - 2,
+		RegCount:           16,
+		RegWidth:           16,
+	},
+	"pearl": {
+		Name:               "pearl",
+		RuntimeName:        "CAHP_RT",
+		BlueprintName:      "IYOKAN-BLUEPRINT-PEARL",
+		ROMSize:            512,
+		RAMSize:            512,
+		PointerWidth:       2,
+		StackAlign:         2,
+		StackPointerOffset: 512 - 2,
+		RegCount:           16,
+		RegWidth:           16,
+	},
+	"alexandrite": {
+		Name:               "alexandrite",
+		RuntimeName:        "ALEXANDRITE_RT",
+		BlueprintName:      "IYOKAN-BLUEPRINT-ALEXANDRITE",
+		ROMSize:            4 * 1024,
+		RAMSize:            1024,
+		PointerWidth:       4,
+		StackAlign:         4,
+		StackPointerOffset: 8,
+		RegCount:           32,
+		RegWidth:           32,
+	},
+}
 
 // Flag for a list of values
 // Thanks to: https://stackoverflow.com/a/28323276
@@ -36,9 +87,88 @@ func (i *arrayFlags) Set(value string) error {
 	return nil
 }
 
-func write16le(out []byte, val int) {
-	out[0] = byte(val & 0xff)
-	out[1] = byte((val >> 8) & 0xff)
+func getCPUProfile(name string) (cpuProfile, error) {
+	name = strings.ToLower(name)
+	profile, ok := cpuProfiles[name]
+	if !ok {
+		return cpuProfile{}, fmt.Errorf("unknown CPU %q", name)
+	}
+	return profile, nil
+}
+
+func resolveCPU(cpuName, cahpCPUName string) (cpuProfile, error) {
+	cpuName = strings.ToLower(cpuName)
+	cahpCPUName = strings.ToLower(cahpCPUName)
+
+	if cpuName != "" && cahpCPUName != "" && cpuName != cahpCPUName {
+		return cpuProfile{}, errors.New("--cpu and --cahp-cpu specify different CPUs")
+	}
+	if cpuName == "" {
+		cpuName = cahpCPUName
+	}
+	if cpuName == "" {
+		cpuName = defaultCPU
+	}
+
+	if cahpCPUName != "" && cahpCPUName != "ruby" && cahpCPUName != "pearl" {
+		return cpuProfile{}, errors.New("--cahp-cpu accepts only ruby or pearl")
+	}
+
+	return getCPUProfile(cpuName)
+}
+
+func addCPUFlags(fs *flag.FlagSet) (*string, *string) {
+	cpuName := fs.String("cpu", "", "CPU target: ruby, pearl, or alexandrite")
+	cahpCPUName := fs.String("cahp-cpu", "", "Compatibility alias for --cpu ruby|pearl")
+	return cpuName, cahpCPUName
+}
+
+func stripCompilerCPUArgs(args []string) (cpuProfile, []string, error) {
+	cpuName := ""
+	cahpCPUName := ""
+	out := make([]string, 0, len(args))
+
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
+		switch {
+		case arg == "--cpu":
+			if i+1 >= len(args) {
+				return cpuProfile{}, nil, errors.New("--cpu requires a value")
+			}
+			i++
+			cpuName = args[i]
+		case strings.HasPrefix(arg, "--cpu="):
+			cpuName = strings.TrimPrefix(arg, "--cpu=")
+		case arg == "--cahp-cpu":
+			if i+1 >= len(args) {
+				return cpuProfile{}, nil, errors.New("--cahp-cpu requires a value")
+			}
+			i++
+			cahpCPUName = args[i]
+		case strings.HasPrefix(arg, "--cahp-cpu="):
+			cahpCPUName = strings.TrimPrefix(arg, "--cahp-cpu=")
+		default:
+			out = append(out, arg)
+		}
+	}
+
+	profile, err := resolveCPU(cpuName, cahpCPUName)
+	return profile, out, err
+}
+
+func isCompileOnly(args []string) bool {
+	for _, arg := range args {
+		if arg == "-c" || arg == "-S" || arg == "-E" {
+			return true
+		}
+	}
+	return false
+}
+
+func writeLE(out []byte, val uint64) {
+	for i := range out {
+		out[i] = byte((val >> (8 * i)) & 0xff)
+	}
 }
 
 func fileExists(path string) bool {
@@ -75,6 +205,8 @@ func getPathOf(name string) (string, error) {
 			(this executable's) directory, and others are in ../share/kvsp.
 		*/
 		switch name {
+		case "ALEXANDRITE_RT":
+			path = "../share/kvsp/alexandrite-rt"
 		case "CAHP_RT":
 			path = "../share/kvsp/cahp-rt"
 		case "CAHP_SIM":
@@ -87,6 +219,8 @@ func getPathOf(name string) (string, error) {
 			path = "../share/kvsp/cahp-ruby.toml"
 		case "IYOKAN-BLUEPRINT-PEARL":
 			path = "../share/kvsp/cahp-pearl.toml"
+		case "IYOKAN-BLUEPRINT-ALEXANDRITE":
+			path = "../share/kvsp/alexandrite.toml"
 		case "IYOKAN-PACKET":
 			path = "iyokan-packet"
 		default:
@@ -120,6 +254,9 @@ func parseELF(fileName string, romSize, ramSize uint64) ([]byte, []byte, error) 
 	ram := make([]byte, ramSize)
 
 	for _, prog := range input.Progs {
+		if prog.ProgHeader.Type != elf.PT_LOAD {
+			continue
+		}
 		addr := prog.ProgHeader.Vaddr
 		size := prog.ProgHeader.Filesz
 		if size == 0 {
@@ -127,21 +264,20 @@ func parseELF(fileName string, romSize, ramSize uint64) ([]byte, []byte, error) 
 		}
 
 		var mem []byte
-		if addr < 0x10000 { // ROM
-			if addr+size >= romSize {
+		if addr < ramBaseAddr { // ROM
+			if addr+size > romSize {
 				return nil, nil, errors.New("Invalid ROM size: too small")
 			}
 			mem = rom[addr : addr+size]
 		} else { // RAM
-			if addr-0x10000+size >= ramSize {
+			if addr-ramBaseAddr+size > ramSize {
 				return nil, nil, errors.New("Invalid RAM size: too small")
 			}
-			mem = ram[addr-0x10000 : addr-0x10000+size]
+			mem = ram[addr-ramBaseAddr : addr-ramBaseAddr+size]
 		}
 
 		reader := prog.Open()
-		_, err := reader.Read(mem)
-		if err != nil {
+		if _, err := io.ReadFull(reader, mem); err != nil {
 			return nil, nil, err
 		}
 	}
@@ -149,7 +285,7 @@ func parseELF(fileName string, romSize, ramSize uint64) ([]byte, []byte, error) 
 	return rom, ram, nil
 }
 
-func attachCommandLineOptions(ram []byte, cmdOptsSrc []string) error {
+func attachCommandLineOptions(ram []byte, cmdOptsSrc []string, profile cpuProfile) error {
 	// N1548 5.1.2.2.1 2
 	// the string pointed to by argv[0]
 	// represents the program name; argv[0][0] shall be the null character if the
@@ -166,32 +302,50 @@ func attachCommandLineOptions(ram []byte, cmdOptsSrc []string) error {
 	}
 
 	ramSize := len(ram)
-	index := ramSize - 2
+	stackTop := ramSize
+	if profile.StackPointerOffset+uint64(profile.PointerWidth) == uint64(ramSize) {
+		stackTop = int(profile.StackPointerOffset)
+	}
+	index := stackTop
 
 	// Set **argv to RAM
 	for i := len(cmdOpts) - 1; i >= 0; i-- {
 		opt := append([]byte(cmdOpts[i]), 0)
 		for j := len(opt) - 1; j >= 0; j-- {
 			index--
+			if index < 0 {
+				return errors.New("Invalid RAM size: command line arguments do not fit")
+			}
 			ram[index] = opt[j]
 		}
 		sargv = append(sargv, index)
 	}
 	// Align index
-	if index%2 == 1 {
-		index--
+	index -= index % profile.StackAlign
+	if index < 0 {
+		return errors.New("Invalid RAM size: command line arguments do not fit")
 	}
 	// Set *argv to RAM
 	for _, val := range sargv {
-		index -= 2
-		write16le(ram[index:index+2], val)
+		index -= profile.PointerWidth
+		if index < 0 {
+			return errors.New("Invalid RAM size: command line arguments do not fit")
+		}
+		writeLE(ram[index:index+profile.PointerWidth], uint64(val))
 	}
 	// Save argc in RAM
-	index -= 2
-	write16le(ram[index:index+2], argc)
+	index -= profile.PointerWidth
+	if index < 0 {
+		return errors.New("Invalid RAM size: command line arguments do not fit")
+	}
+	writeLE(ram[index:index+profile.PointerWidth], uint64(argc))
 	// Save initial stack pointer in RAM
 	initSP := index
-	write16le(ram[ramSize-2:ramSize], initSP)
+	if profile.StackPointerOffset+uint64(profile.PointerWidth) > uint64(len(ram)) {
+		return errors.New("Invalid CPU profile: stack pointer slot is outside RAM")
+	}
+	spOffset := int(profile.StackPointerOffset)
+	writeLE(ram[spOffset:spOffset+profile.PointerWidth], uint64(initSP))
 
 	return nil
 }
@@ -247,16 +401,16 @@ func runIyokan(args0 []string, args1 []string) error {
 func packELF(
 	inputFileName, outputFileName string,
 	cmdOpts []string,
-	romSize, ramSize uint64,
+	profile cpuProfile,
 ) error {
 	if !fileExists(inputFileName) {
 		return errors.New("File not found")
 	}
-	rom, ram, err := parseELF(inputFileName, romSize, ramSize)
+	rom, ram, err := parseELF(inputFileName, profile.ROMSize, profile.RAMSize)
 	if err != nil {
 		return err
 	}
-	if err = attachCommandLineOptions(ram, cmdOpts); err != nil {
+	if err = attachCommandLineOptions(ram, cmdOpts, profile); err != nil {
 		return err
 	}
 
@@ -312,7 +466,19 @@ type plainPacket struct {
 	Ram       []int
 }
 
-func (pkt *plainPacket) loadTOML(src string) error {
+func bytesToLE(bytes []int, bitWidth int) (int, error) {
+	byteWidth := bitWidth / 8
+	if bitWidth%8 != 0 || len(bytes) < byteWidth {
+		return 0, errors.New("Invalid TOML for result packet")
+	}
+	val := 0
+	for i := 0; i < byteWidth; i++ {
+		val |= bytes[i] << (8 * i)
+	}
+	return val, nil
+}
+
+func (pkt *plainPacket) loadTOML(src string, profile cpuProfile) error {
 	var pktTOML plainPacketTOML
 	if _, err := toml.Decode(src, &pktTOML); err != nil {
 		return err
@@ -325,13 +491,20 @@ func (pkt *plainPacket) loadTOML(src string) error {
 	pkt.Regs = make(map[string]int)
 	for _, entry := range pktTOML.Bits {
 		if entry.Size == 1 { // flag
+			if len(entry.Bytes) < 1 {
+				return errors.New("Invalid TOML for result packet")
+			}
 			if entry.Bytes[0] != 0 {
 				pkt.Flags[entry.Name] = true
 			} else {
 				pkt.Flags[entry.Name] = false
 			}
-		} else if entry.Size == 16 { // register
-			pkt.Regs[entry.Name] = entry.Bytes[0] | (entry.Bytes[1] << 8)
+		} else if entry.Size == profile.RegWidth { // register
+			val, err := bytesToLE(entry.Bytes, entry.Size)
+			if err != nil {
+				return err
+			}
+			pkt.Regs[entry.Name] = val
 		} else {
 			return errors.New("Invalid TOML for result packet")
 		}
@@ -362,7 +535,7 @@ func (pkt *plainPacket) loadTOML(src string) error {
 	if _, ok := pkt.Flags["finflag"]; !ok {
 		return errors.New("Invalid TOML for result packet: 'finflag' not found")
 	}
-	for i := 0; i < 16; i++ {
+	for i := 0; i < profile.RegCount; i++ {
 		name := fmt.Sprintf("reg_x%d", i)
 		if _, ok := pkt.Regs[name]; !ok {
 			return errors.New("Invalid TOML for result packet: '" + name + "' not found")
@@ -371,12 +544,12 @@ func (pkt *plainPacket) loadTOML(src string) error {
 
 	return nil
 }
-func (pkt *plainPacket) print(w io.Writer) error {
+func (pkt *plainPacket) print(w io.Writer, profile cpuProfile) error {
 	fmt.Fprintf(w, "#cycle\t%d\n", pkt.NumCycles)
 	fmt.Fprintf(w, "\n")
 	fmt.Fprintf(w, "f0\t%t\n", pkt.Flags["finflag"])
 	fmt.Fprintf(w, "\n")
-	for i := 0; i < 16; i++ {
+	for i := 0; i < profile.RegCount; i++ {
 		name := fmt.Sprintf("reg_x%d", i)
 		fmt.Fprintf(w, "x%d\t%d\n", i, pkt.Regs[name])
 	}
@@ -394,21 +567,57 @@ func (pkt *plainPacket) print(w io.Writer) error {
 }
 
 func doCC() error {
+	profile, userArgs, err := stripCompilerCPUArgs(os.Args[2:])
+	if err != nil {
+		return err
+	}
+
 	// Get the path of clang
 	path, err := getPathOf("CLANG")
 	if err != nil {
 		return err
 	}
 
-	// Get the path of cahp-rt
-	cahpRtPath, err := getPathOf("CAHP_RT")
+	rtPath, err := getPathOf(profile.RuntimeName)
 	if err != nil {
 		return err
 	}
 
-	// Run
-	args := []string{"-target", "cahp", "-mcpu=generic", "-Oz", "--sysroot", cahpRtPath}
-	args = append(args, os.Args[2:]...)
+	var args []string
+	switch profile.Name {
+	case "ruby", "pearl":
+		args = []string{"-target", "cahp", "-mcpu=generic", "-Oz", "--sysroot", rtPath}
+		args = append(args, userArgs...)
+	case "alexandrite":
+		args = []string{
+			"-target", "riscv32-unknown-elf",
+			"-march=rv32i",
+			"-mabi=ilp32",
+			"-Oz",
+			"-ffreestanding",
+			"-fno-builtin",
+			"-fno-unwind-tables",
+			"-fno-asynchronous-unwind-tables",
+			"-isystem", rtPath,
+		}
+		if isCompileOnly(userArgs) {
+			args = append(args, userArgs...)
+		} else {
+			args = append(args,
+				"-fuse-ld=lld",
+				"-nostdlib",
+				filepath.Join(rtPath, "crt0.o"),
+			)
+			args = append(args, userArgs...)
+			args = append(args,
+				"-Wl,-T,"+filepath.Join(rtPath, "alexandrite.lds"),
+				"-L", rtPath,
+				"-lc",
+			)
+		}
+	default:
+		return errors.New("unreachable")
+	}
 	return execCmd(path, args)
 }
 
@@ -427,11 +636,18 @@ func doEmu() error {
 	// Parse command-line arguments.
 	fs := flag.NewFlagSet("emu", flag.ExitOnError)
 	var (
-		whichCAHPCPU = fs.String("cahp-cpu", defaultCAHPProc, "Which CAHP CPU you use, ruby or pearl")
-		iyokanArgs   arrayFlags
+		iyokanArgs arrayFlags
 	)
+	cpuName, cahpCPUName := addCPUFlags(fs)
 	fs.Var(&iyokanArgs, "iyokan-args", "Raw arguments for Iyokan")
 	err := fs.Parse(os.Args[2:])
+	if err != nil {
+		return err
+	}
+	profile, err := resolveCPU(*cpuName, *cahpCPUName)
+	if err != nil {
+		return err
+	}
 
 	// Create tmp file for packing
 	packedFile, err := ioutil.TempFile("", "")
@@ -441,7 +657,7 @@ func doEmu() error {
 	defer os.Remove(packedFile.Name())
 
 	// Pack
-	err = packELF(fs.Args()[0], packedFile.Name(), fs.Args()[1:], defaultROMSize, defaultRAMSize)
+	err = packELF(fs.Args()[0], packedFile.Name(), fs.Args()[1:], profile)
 	if err != nil {
 		return err
 	}
@@ -454,7 +670,7 @@ func doEmu() error {
 	defer os.Remove(resTmpFile.Name())
 
 	// Run Iyokan in plain mode
-	blueprint, err := getPathOf(fmt.Sprintf("IYOKAN-BLUEPRINT-%s", strings.ToUpper(*whichCAHPCPU)))
+	blueprint, err := getPathOf(profile.BlueprintName)
 	if err != nil {
 		return err
 	}
@@ -471,10 +687,10 @@ func doEmu() error {
 
 	// Parse and print the result
 	var pkt plainPacket
-	if err := pkt.loadTOML(result); err != nil {
+	if err := pkt.loadTOML(result, profile); err != nil {
 		return err
 	}
-	pkt.print(os.Stdout)
+	pkt.print(os.Stdout, profile)
 
 	return nil
 }
@@ -486,7 +702,12 @@ func doDec() error {
 		keyFileName   = fs.String("k", "", "Key file name")
 		inputFileName = fs.String("i", "", "Input file name (encrypted)")
 	)
+	cpuName, cahpCPUName := addCPUFlags(fs)
 	err := fs.Parse(os.Args[2:])
+	if err != nil {
+		return err
+	}
+	profile, err := resolveCPU(*cpuName, *cahpCPUName)
 	if err != nil {
 		return err
 	}
@@ -506,6 +727,9 @@ func doDec() error {
 		"--key", *keyFileName,
 		"--in", *inputFileName,
 		"--out", packedFile.Name())
+	if err != nil {
+		return err
+	}
 
 	// Unpack
 	result, err := runIyokanPacket("packet2toml", "--in", packedFile.Name())
@@ -515,10 +739,10 @@ func doDec() error {
 
 	// Parse and print the result
 	var pkt plainPacket
-	if err := pkt.loadTOML(result); err != nil {
+	if err := pkt.loadTOML(result, profile); err != nil {
 		return err
 	}
-	pkt.print(os.Stdout)
+	pkt.print(os.Stdout, profile)
 
 	return nil
 }
@@ -531,7 +755,12 @@ func doEnc() error {
 		inputFileName  = fs.String("i", "", "Input file name (plain)")
 		outputFileName = fs.String("o", "", "Output file name (encrypted)")
 	)
+	cpuName, cahpCPUName := addCPUFlags(fs)
 	err := fs.Parse(os.Args[2:])
+	if err != nil {
+		return err
+	}
+	profile, err := resolveCPU(*cpuName, *cahpCPUName)
 	if err != nil {
 		return err
 	}
@@ -547,7 +776,7 @@ func doEnc() error {
 	defer os.Remove(packedFile.Name())
 
 	// Pack
-	err = packELF(*inputFileName, packedFile.Name(), fs.Args(), defaultROMSize, defaultRAMSize)
+	err = packELF(*inputFileName, packedFile.Name(), fs.Args(), profile)
 	if err != nil {
 		return err
 	}
@@ -609,7 +838,12 @@ func doPlainpacket() error {
 		inputFileName  = fs.String("i", "", "Input file name (plain)")
 		outputFileName = fs.String("o", "", "Output file name (encrypted)")
 	)
+	cpuName, cahpCPUName := addCPUFlags(fs)
 	err := fs.Parse(os.Args[2:])
+	if err != nil {
+		return err
+	}
+	profile, err := resolveCPU(*cpuName, *cahpCPUName)
 	if err != nil {
 		return err
 	}
@@ -617,7 +851,7 @@ func doPlainpacket() error {
 		return errors.New("Specify -i, and -o options properly")
 	}
 
-	return packELF(*inputFileName, *outputFileName, fs.Args(), defaultROMSize, defaultRAMSize)
+	return packELF(*inputFileName, *outputFileName, fs.Args(), profile)
 }
 
 func doRun() error {
@@ -629,13 +863,17 @@ func doRun() error {
 		inputFileName    = fs.String("i", "", "Input file name (encrypted)")
 		outputFileName   = fs.String("o", "", "Output file name (encrypted)")
 		numGPU           = fs.Uint("g", 0, "Number of GPUs (Unspecify or set 0 for CPU mode)")
-		whichCAHPCPU     = fs.String("cahp-cpu", defaultCAHPProc, "Which CAHP CPU you use, ruby or pearl")
 		snapshotFileName = fs.String("snapshot", "", "Snapshot file name to write in")
 		quiet            = fs.Bool("quiet", false, "Be quiet")
 		iyokanArgs       arrayFlags
 	)
+	cpuName, cahpCPUName := addCPUFlags(fs)
 	fs.Var(&iyokanArgs, "iyokan-args", "Raw arguments for Iyokan")
 	err := fs.Parse(os.Args[2:])
+	if err != nil {
+		return err
+	}
+	profile, err := resolveCPU(*cpuName, *cahpCPUName)
 	if err != nil {
 		return err
 	}
@@ -644,7 +882,7 @@ func doRun() error {
 		return errors.New("Specify -c, -bkey, -i, and -o options properly")
 	}
 
-	blueprint, err := getPathOf(fmt.Sprintf("IYOKAN-BLUEPRINT-%s", strings.ToUpper(*whichCAHPCPU)))
+	blueprint, err := getPathOf(profile.BlueprintName)
 	if err != nil {
 		return err
 	}
@@ -725,6 +963,8 @@ func runIyokanTFHE(nClocks uint, bkeyFileName string, outputFileName string, sna
 var kvspVersion = "unk"
 var kvspRevision = "unk"
 var iyokanRevision = "unk"
+var alexandriteRevision = "unk"
+var alexandriteRtRevision = "unk"
 var cahpRubyRevision = "unk"
 var cahpPearlRevision = "unk"
 var cahpRtRevision = "unk"
@@ -735,6 +975,8 @@ var yosysRevision = "unk"
 func doVersion() error {
 	fmt.Printf("KVSP %s\t(rev %s)\n", kvspVersion, kvspRevision)
 	fmt.Printf("- Iyokan\t(rev %s)\n", iyokanRevision)
+	fmt.Printf("- Alexandrite\t(rev %s)\n", alexandriteRevision)
+	fmt.Printf("- alexandrite-rt\t(rev %s)\n", alexandriteRtRevision)
 	fmt.Printf("- cahp-ruby\t(rev %s)\n", cahpRubyRevision)
 	fmt.Printf("- cahp-pearl\t(rev %s)\n", cahpPearlRevision)
 	fmt.Printf("- cahp-rt\t(rev %s)\n", cahpRtRevision)

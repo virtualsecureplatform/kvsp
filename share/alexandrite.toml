@@ -1,0 +1,63 @@
+[[file]]
+type = "yosys-json"
+path = "alexandrite-core.json"
+name = "core"
+
+[[builtin]]
+type = "rom"
+name = "rom"
+in_addr_width = 10
+out_rdata_width = 32
+
+[[builtin]]
+type = "ram"
+name = "ram"
+in_addr_width = 8
+in_wdata_width = 32
+out_rdata_width = 32
+in_wren_width = 4
+
+[connect]
+"rom/addr[0:9]" = "core/io_romAddr[0:9]"
+"core/io_romData[0:31]" = "rom/rdata[0:31]"
+
+"ram/wren[0:3]" = "core/io_ramWriteEnable[0:3]"
+"ram/addr[0:7]" = "core/io_ramAddr[2:9]"
+"ram/wdata[0:31]" = "core/io_ramWriteData[0:31]"
+"core/io_ramReadData[0:31]" = "ram/rdata[0:31]"
+
+"core/reset" = "@reset"
+"@finflag" = "core/io_finishFlag"
+
+"@reg_x0[0:31]" = "core/io_x0[0:31]"
+"@reg_x1[0:31]" = "core/io_x1[0:31]"
+"@reg_x2[0:31]" = "core/io_x2[0:31]"
+"@reg_x3[0:31]" = "core/io_x3[0:31]"
+"@reg_x4[0:31]" = "core/io_x4[0:31]"
+"@reg_x5[0:31]" = "core/io_x5[0:31]"
+"@reg_x6[0:31]" = "core/io_x6[0:31]"
+"@reg_x7[0:31]" = "core/io_x7[0:31]"
+"@reg_x8[0:31]" = "core/io_x8[0:31]"
+"@reg_x9[0:31]" = "core/io_x9[0:31]"
+"@reg_x10[0:31]" = "core/io_x10[0:31]"
+"@reg_x11[0:31]" = "core/io_x11[0:31]"
+"@reg_x12[0:31]" = "core/io_x12[0:31]"
+"@reg_x13[0:31]" = "core/io_x13[0:31]"
+"@reg_x14[0:31]" = "core/io_x14[0:31]"
+"@reg_x15[0:31]" = "core/io_x15[0:31]"
+"@reg_x16[0:31]" = "core/io_x16[0:31]"
+"@reg_x17[0:31]" = "core/io_x17[0:31]"
+"@reg_x18[0:31]" = "core/io_x18[0:31]"
+"@reg_x19[0:31]" = "core/io_x19[0:31]"
+"@reg_x20[0:31]" = "core/io_x20[0:31]"
+"@reg_x21[0:31]" = "core/io_x21[0:31]"
+"@reg_x22[0:31]" = "core/io_x22[0:31]"
+"@reg_x23[0:31]" = "core/io_x23[0:31]"
+"@reg_x24[0:31]" = "core/io_x24[0:31]"
+"@reg_x25[0:31]" = "core/io_x25[0:31]"
+"@reg_x26[0:31]" = "core/io_x26[0:31]"
+"@reg_x27[0:31]" = "core/io_x27[0:31]"
+"@reg_x28[0:31]" = "core/io_x28[0:31]"
+"@reg_x29[0:31]" = "core/io_x29[0:31]"
+"@reg_x30[0:31]" = "core/io_x30[0:31]"
+"@reg_x31[0:31]" = "core/io_x31[0:31]"

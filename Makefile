@@ -4,9 +4,9 @@ SHELL=/bin/bash
 ENABLE_CUDA=0
 BUILDDIR := build
 
-.PHONY: all prepare kvsp iyokan iyokan-avx2 iyokan-avx512 cahp-sim yosys cahp-ruby cahp-pearl llvm-cahp cahp-rt clean
+.PHONY: all prepare kvsp iyokan iyokan-avx2 iyokan-avx512 cahp-sim yosys cahp-ruby cahp-pearl alexandrite llvm-cahp cahp-rt alexandrite-rt clean
 
-all: kvsp iyokan-avx2 iyokan-avx512 cahp-sim cahp-ruby cahp-pearl cahp-rt
+all: kvsp iyokan-avx2 iyokan-avx512 cahp-sim cahp-ruby cahp-pearl alexandrite cahp-rt alexandrite-rt
 	@echo "Build successfully completed!"
 
 prepare:
@@ -28,6 +28,8 @@ kvsp: prepare
 			-X main.kvspVersion=$$(git describe --tags --abbrev=0 || echo "unk") \
 			-X main.kvspRevision=$$(git rev-parse --short HEAD || echo "unk") \
 			-X main.iyokanRevision=$$(git -C ../Iyokan rev-parse --short HEAD || echo "unk") \
+			-X main.alexandriteRevision=$$(git -C ../Alexandrite rev-parse --short HEAD || echo "unk") \
+			-X main.alexandriteRtRevision=$$(git rev-parse --short HEAD || echo "unk") \
 			-X main.cahpRubyRevision=$$(git -C ../cahp-ruby rev-parse --short HEAD || echo "unk") \
 			-X main.cahpPearlRevision=$$(git -C ../cahp-pearl rev-parse --short HEAD || echo "unk") \
 			-X main.cahpRtRevision=$$(git -C ../cahp-rt rev-parse --short HEAD || echo "unk") \
@@ -96,6 +98,14 @@ cahp-pearl: yosys prepare
 		../yosys/yosys build.ys
 	cp $(BUILDDIR)/cahp-pearl/vsp-core-pearl.json $(BUILDDIR)/share/kvsp/pearl-core.json
 
+alexandrite: yosys prepare
+	@echo "Building Alexandrite..."
+	cp -a Alexandrite $(BUILDDIR)/
+	cd $(BUILDDIR)/Alexandrite && sbt "runMain AlexandriteKVSPTop"
+	cd $(BUILDDIR)/Alexandrite && \
+		../yosys/yosys build.ys
+	cp $(BUILDDIR)/Alexandrite/alexandrite-core.json $(BUILDDIR)/share/kvsp/alexandrite-core.json
+
 llvm-cahp: prepare
 	@echo "Building llvm-cahp..."
 	mkdir -p $(BUILDDIR)/llvm-cahp
@@ -104,7 +114,7 @@ llvm-cahp: prepare
 			-DCMAKE_BUILD_TYPE="Release" \
 			-DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
 			-DLLVM_ENABLE_PROJECTS="lld;clang" \
-			-DLLVM_TARGETS_TO_BUILD="" \
+			-DLLVM_TARGETS_TO_BUILD="RISCV" \
 			-DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD="CAHP" \
 			../../llvm-cahp/llvm; fi && \
 		$(MAKE)
@@ -117,6 +127,14 @@ cahp-rt: llvm-cahp prepare
 	mkdir -p $(BUILDDIR)/share/kvsp/cahp-rt
 	cd $(BUILDDIR)/cahp-rt && \
 		cp -a crt0.o libc.a cahp.lds ../share/kvsp/cahp-rt/
+
+alexandrite-rt: llvm-cahp prepare
+	@echo "Building alexandrite-rt..."
+	cp -a alexandrite-rt $(BUILDDIR)/
+	cd $(BUILDDIR)/alexandrite-rt && CC=../llvm-cahp/bin/clang AR=../llvm-cahp/bin/llvm-ar $(MAKE)
+	mkdir -p $(BUILDDIR)/share/kvsp/alexandrite-rt
+	cd $(BUILDDIR)/alexandrite-rt && \
+		cp -a crt0.o libc.a alexandrite.lds ../share/kvsp/alexandrite-rt/
 
 clean:
 	rm -rf $(BUILDDIR)
