@@ -25,7 +25,7 @@ case "$1" in
 
     tag )
         [ $# -eq 2 ] || ( echo "Usage: $0 tag VERSION"; exit 1 )
-        git tag -s "v$2" -m "v$2"
+        git tag -a "v$2" -m "v$2"
         ;;
 
     rebuild-kvsp )
@@ -41,6 +41,7 @@ case "$1" in
         # Usage: _copy_destdir DESTDIR IYOKAN_BIN IYOKAN_PACKET_BIN
         _copy_release_dir() {
             local destdir="$1" iyokan_bin="$2" iyokan_packet_bin="$3"
+            rm -rf "$destdir"
             mkdir "$destdir"
             cp -a build/bin build/share "$destdir"
             # Place the variant-specific iyokan binaries as the canonical names.
@@ -51,7 +52,9 @@ case "$1" in
             rm -f "$destdir"/bin/iyokan-packet-avx2 "$destdir"/bin/iyokan-packet-avx512
             strip "$destdir"/bin/* || true
             find \
+                Alexandrite \
                 Iyokan \
+                alexandrite-rt \
                 cahp-pearl \
                 cahp-rt \
                 cahp-ruby \
@@ -64,6 +67,24 @@ case "$1" in
                     mkdir -p "$destdir/LICENSEs/$(dirname "$line")" &&
                     cp -a "$line" "$destdir/LICENSEs/$(dirname "$line")"/;
                 done
+            cp -a LICENSE "$destdir/LICENSEs/"
+            for file in \
+                bin/kvsp \
+                bin/iyokan \
+                bin/iyokan-packet \
+                share/kvsp/alexandrite.toml \
+                share/kvsp/alexandrite-core.json \
+                share/kvsp/alexandrite-rt/alexandrite.lds \
+                share/kvsp/alexandrite-rt/crt0.o \
+                share/kvsp/alexandrite-rt/libc.a \
+                share/kvsp/cahp-rt/cahp.lds \
+                share/kvsp/cahp-rt/crt0.o \
+                share/kvsp/cahp-rt/libc.a \
+                share/kvsp/pearl-core.json \
+                share/kvsp/ruby-core.json \
+                ; do
+                [ -f "$destdir/$file" ] || ( echo "Missing release artifact: $destdir/$file"; exit 1 )
+            done
             "$destdir"/bin/kvsp version
         }
         # AVX512 release (default)
@@ -84,14 +105,19 @@ case "$1" in
         ;;
 
     release )
-        [ $# -eq 2 ] || ( echo "Usage: $0 release VERSION"; exit 1 )
+        [ $# -ge 2 ] && [ $# -le 3 ] || ( echo "Usage: $0 release VERSION [NOTES_FILE]"; exit 1 )
         git push --tags
+        notes_args=(--generate-notes)
+        if [ $# -eq 3 ]; then
+            notes_args=(--notes-file "$3")
+        fi
         gh release create "v$2" \
             kvsp.tar.gz \
             kvsp-avx2.tar.gz \
-            --title "v$2"
+            --title "v$2" \
+            "${notes_args[@]}"
         ;;
 
     * )
-        echo "Usage: $0 bump-submodule|build|tag|rebuild-kvsp|copy|pack"
+        echo "Usage: $0 bump-submodule|build|test|tag|rebuild-kvsp|copy|pack|release"
 esac
