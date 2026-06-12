@@ -44,6 +44,7 @@ case "$1" in
             rm -rf "$destdir"
             mkdir "$destdir"
             cp -a build/bin build/share "$destdir"
+            cp -a README.md demo.bash "$destdir"
             # Place the variant-specific iyokan binaries as the canonical names.
             cp -a "$iyokan_bin"          "$destdir/bin/iyokan"
             cp -a "$iyokan_packet_bin"   "$destdir/bin/iyokan-packet"
@@ -72,6 +73,8 @@ case "$1" in
                 bin/kvsp \
                 bin/iyokan \
                 bin/iyokan-packet \
+                README.md \
+                demo.bash \
                 share/kvsp/alexandrite.toml \
                 share/kvsp/alexandrite-core.json \
                 share/kvsp/alexandrite-rt/alexandrite.lds \
