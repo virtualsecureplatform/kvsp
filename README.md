@@ -203,6 +203,23 @@ Use option `ENABLE_CUDA` if you build KVSP with GPU support:
 $ make -j$(nproc) ENABLE_CUDA=1 CUDACXX="/usr/local/cuda/bin/nvcc" CUDAHOSTCXX="/usr/bin/clang-8"
 ```
 
+### Tangor backend
+
+KVSP's Iyokan build targets can also use Tangor's compatible `iyokan` and
+`iyokan-packet` targets. Keep Iyokan as the default and build Tangor in a
+separate output directory:
+
+```
+$ make -j$(nproc) BUILDDIR=build-tangor IYOKAN_SOURCE=../Tangor \
+    IYOKAN_CMAKE_ARGS='-DTANGOR_USE_BUNDLED_STARPU=ON' iyokan-avx2
+```
+
+The resulting `build-tangor/bin/iyokan-avx2` and
+`build-tangor/bin/iyokan-packet-avx2` can be selected with
+`KVSP_IYOKAN_PATH` and `KVSP_IYOKAN_PACKET_PATH`, or copied into a KVSP
+release's `bin` directory. `IYOKAN_CMAKE_ARGS` is passed unchanged to the
+chosen backend's CMake configure step.
+
 ## Build KVSP Using Docker
 
 Based on Ubuntu 20.04 LTS with NVIDIA CUDA 11.1.1.

@@ -3,6 +3,14 @@ SHELL=/bin/bash
 ### Config parameters.
 ENABLE_CUDA=0
 BUILDDIR := build
+# Source tree that provides the Iyokan-compatible `iyokan` and
+# `iyokan-packet` targets. Override with `IYOKAN_SOURCE=../Tangor` to build
+# KVSP against Tangor.
+IYOKAN_SOURCE ?= Iyokan
+IYOKAN_SOURCE_ABS := $(abspath $(IYOKAN_SOURCE))
+# Extra arguments passed to the selected compatibility backend's CMake
+# configure step. Tangor users can enable its CPU StarPU evaluator here.
+IYOKAN_CMAKE_ARGS ?=
 
 .PHONY: all prepare kvsp iyokan iyokan-avx2 iyokan-avx512 cahp-sim yosys cahp-ruby cahp-pearl alexandrite llvm-cahp cahp-rt alexandrite-rt clean
 
@@ -27,7 +35,7 @@ kvsp: prepare
 		go build -o ../$(BUILDDIR)/kvsp/kvsp -ldflags "\
 			-X main.kvspVersion=$$(git describe --tags --abbrev=0 || echo "unk") \
 			-X main.kvspRevision=$$(git rev-parse --short HEAD || echo "unk") \
-			-X main.iyokanRevision=$$(git -C ../Iyokan rev-parse --short HEAD || echo "unk") \
+			-X main.iyokanRevision=$$(git -C "$(IYOKAN_SOURCE_ABS)" rev-parse --short HEAD || echo "unk") \
 			-X main.alexandriteRevision=$$(git -C ../Alexandrite rev-parse --short HEAD || echo "unk") \
 			-X main.alexandriteRtRevision=$$(git rev-parse --short HEAD || echo "unk") \
 			-X main.cahpRubyRevision=$$(git -C ../cahp-ruby rev-parse --short HEAD || echo "unk") \
@@ -49,7 +57,8 @@ iyokan-avx2: prepare
 			-DIYOKAN_ENABLE_CUDA=$(ENABLE_CUDA) \
 			-DIYOKAN_MARCH=x86-64-v3 \
 			-DUSE_AVX512=OFF \
-			../../Iyokan; fi && \
+			$(IYOKAN_CMAKE_ARGS) \
+			"$(IYOKAN_SOURCE_ABS)"; fi && \
 		$(MAKE) iyokan iyokan-packet
 	cp -a $(BUILDDIR)/Iyokan-avx2/bin/iyokan $(BUILDDIR)/bin/iyokan-avx2
 	cp -a $(BUILDDIR)/Iyokan-avx2/bin/iyokan-packet $(BUILDDIR)/bin/iyokan-packet-avx2
@@ -62,7 +71,8 @@ iyokan-avx512: prepare
 			-DCMAKE_BUILD_TYPE="Release" \
 			-DIYOKAN_ENABLE_CUDA=$(ENABLE_CUDA) \
 			-DUSE_AVX512=ON \
-			../../Iyokan; fi && \
+			$(IYOKAN_CMAKE_ARGS) \
+			"$(IYOKAN_SOURCE_ABS)"; fi && \
 		$(MAKE) iyokan iyokan-packet
 	cp -a $(BUILDDIR)/Iyokan-avx512/bin/iyokan $(BUILDDIR)/bin/iyokan
 	cp -a $(BUILDDIR)/Iyokan-avx512/bin/iyokan-packet $(BUILDDIR)/bin/iyokan-packet
