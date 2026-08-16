@@ -193,6 +193,11 @@ $ git submodule update --init --recursive
 
 Build KVSP:
 
+The bundled Iyokan backend defaults to Block Binary keys with Subset Keys.
+After upgrading, regenerate `secret.key`, bootstrapping/evaluation keys,
+encrypted executables, and snapshots: artifacts created with the former
+defaults are not compatible.
+
 ```
 $ make -j$(nproc) # It may take a while.
 ```
