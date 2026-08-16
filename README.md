@@ -179,6 +179,23 @@ sudo apt update&&sudo apt upgrade -y&&sudo apt install -y libgoogle-perftools-de
 
 ## Build
 
+### Tangor CPU+GPU evaluator
+
+KVSP can use Tangor's Iyokan-compatible binaries while keeping CPU and CUDA
+workers in one execution. Start from a clean Iyokan build directory, then:
+
+```sh
+make ENABLE_CUDA=1 IYOKAN_SOURCE=../Tangor iyokan-avx2
+STARPU_NCPU=16 STARPU_NCUDA=2 STARPU_NWORKER_PER_CUDA=8 \
+  build/bin/kvsp run ...
+```
+
+Tangor's StarPU scheduler selects CPU or CUDA for each ready level-0
+bootstrapped Boolean gate. Some work (linear NOT and packed RAM/ROM selectors)
+is CPU-only, so keep at least one CPU worker for general KVSP workloads.
+`STARPU_SCHED=eager` is useful when evaluating a mixed pool. Do not add
+Iyokan's `--enable-gpu` flag: it selects a different, GPU-only frontend.
+
 Clone this repository:
 
 ```
