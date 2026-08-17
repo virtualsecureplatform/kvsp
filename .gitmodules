@@ -22,3 +22,7 @@
 [submodule "Alexandrite"]
 	path = Alexandrite
 	url = https://github.com/virtualsecureplatform/Alexandrite.git
+[submodule "Tangor"]
+	path = Tangor
+	url = https://github.com/virtualsecureplatform/Tangor.git
+	branch = main

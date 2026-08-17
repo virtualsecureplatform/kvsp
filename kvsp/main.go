@@ -18,6 +18,7 @@ import (
 )
 
 var flagVerbose bool
+var evaluatorBackend = "iyokan"
 
 const defaultCPU = "ruby"
 const ramBaseAddr = 0x10000
@@ -123,6 +124,20 @@ func addCPUFlags(fs *flag.FlagSet) (*string, *string) {
 	return cpuName, cahpCPUName
 }
 
+func addBackendFlag(fs *flag.FlagSet) *string {
+	return fs.String("backend", "iyokan", "Evaluator backend: iyokan or tangor")
+}
+
+func selectBackend(name string) error {
+	switch strings.ToLower(name) {
+	case "iyokan", "tangor":
+		evaluatorBackend = strings.ToLower(name)
+		return nil
+	default:
+		return fmt.Errorf("unknown evaluator backend %q (expected iyokan or tangor)", name)
+	}
+}
+
 func stripCompilerCPUArgs(args []string) (cpuProfile, []string, error) {
 	cpuName := ""
 	cahpCPUName := ""
@@ -214,7 +229,11 @@ func getPathOf(name string) (string, error) {
 		case "CLANG":
 			path = "clang"
 		case "IYOKAN":
-			path = "iyokan"
+			if evaluatorBackend == "tangor" {
+				path = "tangor-iyokan"
+			} else {
+				path = "iyokan"
+			}
 		case "IYOKAN-BLUEPRINT-RUBY":
 			path = "../share/kvsp/cahp-ruby.toml"
 		case "IYOKAN-BLUEPRINT-PEARL":
@@ -222,7 +241,11 @@ func getPathOf(name string) (string, error) {
 		case "IYOKAN-BLUEPRINT-ALEXANDRITE":
 			path = "../share/kvsp/alexandrite.toml"
 		case "IYOKAN-PACKET":
-			path = "iyokan-packet"
+			if evaluatorBackend == "tangor" {
+				path = "tangor-iyokan-packet"
+			} else {
+				path = "iyokan-packet"
+			}
 		default:
 			return "", errors.New("Invalid name")
 		}
@@ -237,6 +260,26 @@ func getPathOf(name string) (string, error) {
 	}
 
 	if !fileExists(path) {
+		// The AVX2 Tangor build uses suffixed binary names. Prefer the
+		// release/AVX512 names above, then transparently use this portable build.
+		if relative && evaluatorBackend == "tangor" {
+			var fallback string
+			switch name {
+			case "IYOKAN":
+				fallback = "tangor-iyokan-avx2"
+			case "IYOKAN-PACKET":
+				fallback = "tangor-iyokan-packet-avx2"
+			}
+			if fallback != "" {
+				fallbackPath, err := prefixExecDir(fallback)
+				if err != nil {
+					return "", err
+				}
+				if fileExists(fallbackPath) {
+					return fallbackPath, nil
+				}
+			}
+		}
 		return "", fmt.Errorf("%s not found at %s", name, path)
 	}
 
@@ -639,9 +682,13 @@ func doEmu() error {
 		iyokanArgs arrayFlags
 	)
 	cpuName, cahpCPUName := addCPUFlags(fs)
+	backend := addBackendFlag(fs)
 	fs.Var(&iyokanArgs, "iyokan-args", "Raw arguments for Iyokan")
 	err := fs.Parse(os.Args[2:])
 	if err != nil {
+		return err
+	}
+	if err := selectBackend(*backend); err != nil {
 		return err
 	}
 	profile, err := resolveCPU(*cpuName, *cahpCPUName)
@@ -703,8 +750,12 @@ func doDec() error {
 		inputFileName = fs.String("i", "", "Input file name (encrypted)")
 	)
 	cpuName, cahpCPUName := addCPUFlags(fs)
+	backend := addBackendFlag(fs)
 	err := fs.Parse(os.Args[2:])
 	if err != nil {
+		return err
+	}
+	if err := selectBackend(*backend); err != nil {
 		return err
 	}
 	profile, err := resolveCPU(*cpuName, *cahpCPUName)
@@ -756,8 +807,12 @@ func doEnc() error {
 		outputFileName = fs.String("o", "", "Output file name (encrypted)")
 	)
 	cpuName, cahpCPUName := addCPUFlags(fs)
+	backend := addBackendFlag(fs)
 	err := fs.Parse(os.Args[2:])
 	if err != nil {
+		return err
+	}
+	if err := selectBackend(*backend); err != nil {
 		return err
 	}
 	profile, err := resolveCPU(*cpuName, *cahpCPUName)
@@ -795,8 +850,12 @@ func doGenkey() error {
 	var (
 		outputFileName = fs.String("o", "", "Output file name")
 	)
+	backend := addBackendFlag(fs)
 	err := fs.Parse(os.Args[2:])
 	if err != nil {
+		return err
+	}
+	if err := selectBackend(*backend); err != nil {
 		return err
 	}
 	if *outputFileName == "" {
@@ -816,8 +875,12 @@ func doGenbkey() error {
 		inputFileName  = fs.String("i", "", "Input file name (secret key)")
 		outputFileName = fs.String("o", "", "Output file name (bootstrapping key)")
 	)
+	backend := addBackendFlag(fs)
 	err := fs.Parse(os.Args[2:])
 	if err != nil {
+		return err
+	}
+	if err := selectBackend(*backend); err != nil {
 		return err
 	}
 	if *inputFileName == "" || *outputFileName == "" {
@@ -839,8 +902,12 @@ func doPlainpacket() error {
 		outputFileName = fs.String("o", "", "Output file name (encrypted)")
 	)
 	cpuName, cahpCPUName := addCPUFlags(fs)
+	backend := addBackendFlag(fs)
 	err := fs.Parse(os.Args[2:])
 	if err != nil {
+		return err
+	}
+	if err := selectBackend(*backend); err != nil {
 		return err
 	}
 	profile, err := resolveCPU(*cpuName, *cahpCPUName)
@@ -868,9 +935,13 @@ func doRun() error {
 		iyokanArgs       arrayFlags
 	)
 	cpuName, cahpCPUName := addCPUFlags(fs)
+	backend := addBackendFlag(fs)
 	fs.Var(&iyokanArgs, "iyokan-args", "Raw arguments for Iyokan")
 	err := fs.Parse(os.Args[2:])
 	if err != nil {
+		return err
+	}
+	if err := selectBackend(*backend); err != nil {
 		return err
 	}
 	profile, err := resolveCPU(*cpuName, *cahpCPUName)
@@ -910,9 +981,13 @@ func doResume() error {
 		quiet            = fs.Bool("quiet", false, "Be quiet")
 		iyokanArgs       arrayFlags
 	)
+	backend := addBackendFlag(fs)
 	fs.Var(&iyokanArgs, "iyokan-args", "Raw arguments for Iyokan")
 	err := fs.Parse(os.Args[2:])
 	if err != nil {
+		return err
+	}
+	if err := selectBackend(*backend); err != nil {
 		return err
 	}
 
@@ -963,6 +1038,7 @@ func runIyokanTFHE(nClocks uint, bkeyFileName string, outputFileName string, sna
 var kvspVersion = "unk"
 var kvspRevision = "unk"
 var iyokanRevision = "unk"
+var tangorRevision = "unk"
 var alexandriteRevision = "unk"
 var alexandriteRtRevision = "unk"
 var cahpRubyRevision = "unk"
@@ -975,6 +1051,7 @@ var yosysRevision = "unk"
 func doVersion() error {
 	fmt.Printf("KVSP %s\t(rev %s)\n", kvspVersion, kvspRevision)
 	fmt.Printf("- Iyokan\t(rev %s)\n", iyokanRevision)
+	fmt.Printf("- Tangor\t(rev %s)\n", tangorRevision)
 	fmt.Printf("- Alexandrite\t(rev %s)\n", alexandriteRevision)
 	fmt.Printf("- alexandrite-rt\t(rev %s)\n", alexandriteRtRevision)
 	fmt.Printf("- cahp-ruby\t(rev %s)\n", cahpRubyRevision)

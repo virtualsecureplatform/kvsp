@@ -3,18 +3,23 @@ SHELL=/bin/bash
 ### Config parameters.
 ENABLE_CUDA=0
 BUILDDIR := build
-# Source tree that provides the Iyokan-compatible `iyokan` and
-# `iyokan-packet` targets. Override with `IYOKAN_SOURCE=../Tangor` to build
-# KVSP against Tangor.
+# Source tree that provides Iyokan's standard `iyokan` and `iyokan-packet`
+# targets.
 IYOKAN_SOURCE ?= Iyokan
 IYOKAN_SOURCE_ABS := $(abspath $(IYOKAN_SOURCE))
-# Extra arguments passed to the selected compatibility backend's CMake
-# configure step. Tangor users can enable its CPU StarPU evaluator here.
+# Tangor is built independently, so both evaluator backends can be installed
+# in one KVSP tree and selected with `kvsp --backend`.
+TANGOR_SOURCE ?= Tangor
+TANGOR_SOURCE_ABS := $(abspath $(TANGOR_SOURCE))
+# Extra arguments passed to Iyokan's CMake configure step.
 IYOKAN_CMAKE_ARGS ?=
+# Extra arguments passed to Tangor's CMake configure step.  Tangor defaults to
+# its native cuFHEpp GPU evaluator when ENABLE_CUDA=1.
+TANGOR_CMAKE_ARGS ?=
 
-.PHONY: all prepare kvsp iyokan iyokan-avx2 iyokan-avx512 cahp-sim yosys cahp-ruby cahp-pearl alexandrite llvm-cahp cahp-rt alexandrite-rt clean
+.PHONY: all prepare kvsp iyokan iyokan-avx2 iyokan-avx512 tangor tangor-avx2 tangor-avx512 cahp-sim yosys cahp-ruby cahp-pearl alexandrite llvm-cahp cahp-rt alexandrite-rt clean
 
-all: kvsp iyokan-avx2 iyokan-avx512 cahp-sim cahp-ruby cahp-pearl alexandrite cahp-rt alexandrite-rt
+all: kvsp iyokan-avx2 iyokan-avx512 tangor-avx2 tangor-avx512 cahp-sim cahp-ruby cahp-pearl alexandrite cahp-rt alexandrite-rt
 	@echo "Build successfully completed!"
 
 prepare:
@@ -36,6 +41,7 @@ kvsp: prepare
 			-X main.kvspVersion=$$(git describe --tags --abbrev=0 || echo "unk") \
 			-X main.kvspRevision=$$(git rev-parse --short HEAD || echo "unk") \
 			-X main.iyokanRevision=$$(git -C "$(IYOKAN_SOURCE_ABS)" rev-parse --short HEAD || echo "unk") \
+			-X main.tangorRevision=$$(git -C "$(TANGOR_SOURCE_ABS)" rev-parse --short HEAD || echo "unk") \
 			-X main.alexandriteRevision=$$(git -C ../Alexandrite rev-parse --short HEAD || echo "unk") \
 			-X main.alexandriteRtRevision=$$(git rev-parse --short HEAD || echo "unk") \
 			-X main.cahpRubyRevision=$$(git -C ../cahp-ruby rev-parse --short HEAD || echo "unk") \
@@ -76,6 +82,37 @@ iyokan-avx512: prepare
 		$(MAKE) iyokan iyokan-packet
 	cp -a $(BUILDDIR)/Iyokan-avx512/bin/iyokan $(BUILDDIR)/bin/iyokan
 	cp -a $(BUILDDIR)/Iyokan-avx512/bin/iyokan-packet $(BUILDDIR)/bin/iyokan-packet
+
+tangor: tangor-avx512
+
+tangor-avx2: prepare
+	@echo "Building Tangor (AVX2, -march=x86-64-v3, USE_AVX512=OFF)..."
+	mkdir -p $(BUILDDIR)/Tangor-avx2
+	cd $(BUILDDIR)/Tangor-avx2 && \
+		if [ ! -f CMakeCache.txt ] || [ ! -f Makefile ]; then cmake \
+			-DCMAKE_BUILD_TYPE="Release" \
+			-DIYOKAN_ENABLE_CUDA=$(ENABLE_CUDA) \
+			-DIYOKAN_MARCH=x86-64-v3 \
+			-DUSE_AVX512=OFF \
+			$(TANGOR_CMAKE_ARGS) \
+			"$(TANGOR_SOURCE_ABS)"; fi && \
+		$(MAKE) iyokan iyokan-packet
+	cp -a $(BUILDDIR)/Tangor-avx2/bin/iyokan $(BUILDDIR)/bin/tangor-iyokan-avx2
+	cp -a $(BUILDDIR)/Tangor-avx2/bin/iyokan-packet $(BUILDDIR)/bin/tangor-iyokan-packet-avx2
+
+tangor-avx512: prepare
+	@echo "Building Tangor (AVX512, -march=native, USE_AVX512=ON)..."
+	mkdir -p $(BUILDDIR)/Tangor-avx512
+	cd $(BUILDDIR)/Tangor-avx512 && \
+		if [ ! -f CMakeCache.txt ] || [ ! -f Makefile ]; then cmake \
+			-DCMAKE_BUILD_TYPE="Release" \
+			-DIYOKAN_ENABLE_CUDA=$(ENABLE_CUDA) \
+			-DUSE_AVX512=ON \
+			$(TANGOR_CMAKE_ARGS) \
+			"$(TANGOR_SOURCE_ABS)"; fi && \
+		$(MAKE) iyokan iyokan-packet
+	cp -a $(BUILDDIR)/Tangor-avx512/bin/iyokan $(BUILDDIR)/bin/tangor-iyokan
+	cp -a $(BUILDDIR)/Tangor-avx512/bin/iyokan-packet $(BUILDDIR)/bin/tangor-iyokan-packet
 
 cahp-sim: prepare
 	@echo "Building cahp-sim..."

@@ -24,8 +24,12 @@ case "$1" in
         ;;
 
     tag )
-        [ $# -eq 2 ] || ( echo "Usage: $0 tag VERSION"; exit 1 )
-        git tag -a "v$2" -m "v$2"
+        [ $# -eq 2 ] || [ $# -eq 3 ] || ( echo "Usage: $0 tag VERSION [NOTES_FILE]"; exit 1 )
+        if [ $# -eq 3 ]; then
+            git tag -a "v$2" -F "$3"
+        else
+            git tag -a "v$2" -m "v$2"
+        fi
         ;;
 
     rebuild-kvsp )
@@ -38,9 +42,9 @@ case "$1" in
     copy )
         [ $# -eq 2 ] || ( echo "Usage: $0 copy VERSION"; exit 1 )
         # Helper: populate a release directory with binaries and licenses.
-        # Usage: _copy_destdir DESTDIR IYOKAN_BIN IYOKAN_PACKET_BIN
+        # Usage: _copy_release_dir DESTDIR IYOKAN_BIN IYOKAN_PACKET_BIN TANGOR_BIN TANGOR_PACKET_BIN
         _copy_release_dir() {
-            local destdir="$1" iyokan_bin="$2" iyokan_packet_bin="$3"
+            local destdir="$1" iyokan_bin="$2" iyokan_packet_bin="$3" tangor_bin="$4" tangor_packet_bin="$5"
             rm -rf "$destdir"
             mkdir "$destdir"
             cp -a build/bin build/share "$destdir"
@@ -48,13 +52,18 @@ case "$1" in
             # Place the variant-specific iyokan binaries as the canonical names.
             cp -a "$iyokan_bin"          "$destdir/bin/iyokan"
             cp -a "$iyokan_packet_bin"   "$destdir/bin/iyokan-packet"
+            cp -a "$tangor_bin"          "$destdir/bin/tangor-iyokan"
+            cp -a "$tangor_packet_bin"   "$destdir/bin/tangor-iyokan-packet"
             # Remove the variant-suffixed binaries from the release directory.
             rm -f "$destdir"/bin/iyokan-avx2 "$destdir"/bin/iyokan-avx512
             rm -f "$destdir"/bin/iyokan-packet-avx2 "$destdir"/bin/iyokan-packet-avx512
+            rm -f "$destdir"/bin/tangor-iyokan-avx2 "$destdir"/bin/tangor-iyokan-avx512
+            rm -f "$destdir"/bin/tangor-iyokan-packet-avx2 "$destdir"/bin/tangor-iyokan-packet-avx512
             strip "$destdir"/bin/* || true
             find \
                 Alexandrite \
                 Iyokan \
+                Tangor \
                 alexandrite-rt \
                 cahp-pearl \
                 cahp-rt \
@@ -73,6 +82,8 @@ case "$1" in
                 bin/kvsp \
                 bin/iyokan \
                 bin/iyokan-packet \
+                bin/tangor-iyokan \
+                bin/tangor-iyokan-packet \
                 README.md \
                 demo.bash \
                 share/kvsp/alexandrite.toml \
@@ -93,11 +104,15 @@ case "$1" in
         # AVX512 release (default)
         _copy_release_dir "kvsp_v$2" \
             build/bin/iyokan \
-            build/bin/iyokan-packet
+            build/bin/iyokan-packet \
+            build/bin/tangor-iyokan \
+            build/bin/tangor-iyokan-packet
         # AVX2 release
         _copy_release_dir "kvsp_v$2-avx2" \
             build/bin/iyokan-avx2 \
-            build/bin/iyokan-packet-avx2
+            build/bin/iyokan-packet-avx2 \
+            build/bin/tangor-iyokan-avx2 \
+            build/bin/tangor-iyokan-packet-avx2
         ;;
 
     pack )

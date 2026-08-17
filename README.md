@@ -179,23 +179,6 @@ sudo apt update&&sudo apt upgrade -y&&sudo apt install -y libgoogle-perftools-de
 
 ## Build
 
-### Tangor CPU+GPU evaluator
-
-KVSP can use Tangor's Iyokan-compatible binaries while keeping CPU and CUDA
-workers in one execution. Start from a clean Iyokan build directory, then:
-
-```sh
-make ENABLE_CUDA=1 IYOKAN_SOURCE=../Tangor iyokan-avx2
-STARPU_NCPU=16 STARPU_NCUDA=2 STARPU_NWORKER_PER_CUDA=8 \
-  build/bin/kvsp run ...
-```
-
-Tangor's StarPU scheduler selects CPU or CUDA for each ready level-0
-bootstrapped Boolean gate. Some work (linear NOT and packed RAM/ROM selectors)
-is CPU-only, so keep at least one CPU worker for general KVSP workloads.
-`STARPU_SCHED=eager` is useful when evaluating a mixed pool. Do not add
-Iyokan's `--enable-gpu` flag: it selects a different, GPU-only frontend.
-
 Clone this repository:
 
 ```
@@ -218,6 +201,26 @@ defaults are not compatible.
 ```
 $ make -j$(nproc) # It may take a while.
 ```
+
+### Tangor evaluator backend
+
+Tangor is bundled as a submodule and can be installed alongside Iyokan. Build
+it with CUDA support, then select it from the `kvsp` command:
+
+```sh
+$ make ENABLE_CUDA=1 tangor
+$ build/bin/kvsp run --backend tangor --cpu alexandrite \
+    -bkey bootstrapping.key -i fib.enc -o result.enc -c 30 -g 2
+```
+
+`--backend tangor` is also accepted by `emu`, `enc`, `dec`, `genkey`,
+`genbkey`, `plainpacket`, and `resume`; Iyokan remains the default. `-g` uses
+Tangor's native cuFHEpp GPU evaluator. The AVX2-compatible build target is
+`make ENABLE_CUDA=1 tangor-avx2`; the command automatically selects its
+suffixed binaries when the AVX-512 build is absent.
+
+Release archives include both backends, so no `IYOKAN_SOURCE` override or
+manual binary replacement is required.
 
 Use option `ENABLE_CUDA` if you build KVSP with GPU support:
 
