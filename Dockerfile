@@ -5,7 +5,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y \
     build-essential git curl openjdk-17-jdk-headless \
     cmake clang bison flex libreadline-dev autoconf automake libtool libtool-bin \
-    gawk tcl-dev libffi-dev graphviz xdot pkg-config python3 libboost-system-dev \
+    gawk tcl-dev libffi-dev graphviz xdot pkg-config libhwloc-dev python3 libboost-system-dev \
 	libboost-python-dev libboost-filesystem-dev zlib1g-dev gnupg \
     && rm -rf /var/lib/apt/lists/*
 
