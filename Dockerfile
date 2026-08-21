@@ -23,7 +23,7 @@ RUN for dir in /build /build/Alexandrite /build/Iyokan /build/Tangor \
         /build/cahp-pearl /build/cahp-rt /build/cahp-ruby /build/cahp-sim \
         /build/llvm-cahp /build/yosys /build/yosys/abc \
         /build/yosys/libs/cxxopts; do \
-        git config --system --add safe.directory "$$dir"; \
+        git config --system --add safe.directory "$dir"; \
     done
 
 # Run the build when executing `docker run`
