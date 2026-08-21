@@ -45,9 +45,26 @@ case "$1" in
         # Usage: _copy_release_dir DESTDIR IYOKAN_BIN IYOKAN_PACKET_BIN TANGOR_BIN TANGOR_PACKET_BIN STARPU_LIB_DIR
         _copy_release_dir() {
             local destdir="$1" iyokan_bin="$2" iyokan_packet_bin="$3" tangor_bin="$4" tangor_packet_bin="$5" starpu_lib_dir="$6"
+            # The LLVM build directory contains the full developer tool suite
+            # (debuggers, analyzers, IR tools, etc.).  A KVSP release only
+            # needs the CAHP compiler/linker path and the demo size utility.
+            # Keep this list explicit so release archives do not accidentally
+            # grow as LLVM adds more tools.
+            local release_bins=(
+                kvsp
+                cahp-sim
+                clang clang++ clang-21
+                lld ld.lld
+                llvm-ar llvm-ranlib
+                llvm-objcopy llvm-strip llvm-size
+            )
             rm -rf "$destdir"
-            mkdir "$destdir"
-            cp -a build/bin build/share "$destdir"
+            mkdir -p "$destdir/bin"
+            for release_bin in "${release_bins[@]}"; do
+                [ -e "build/bin/$release_bin" ] || ( echo "Missing release binary: build/bin/$release_bin"; exit 1 )
+                cp -a "build/bin/$release_bin" "$destdir/bin/"
+            done
+            cp -a build/share "$destdir"
             mkdir "$destdir/lib"
             for starpu_lib in "$starpu_lib_dir"/libstarpu-1.4.so*; do
                 [ -e "$starpu_lib" ] || continue
