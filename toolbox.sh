@@ -42,12 +42,18 @@ case "$1" in
     copy )
         [ $# -eq 2 ] || ( echo "Usage: $0 copy VERSION"; exit 1 )
         # Helper: populate a release directory with binaries and licenses.
-        # Usage: _copy_release_dir DESTDIR IYOKAN_BIN IYOKAN_PACKET_BIN TANGOR_BIN TANGOR_PACKET_BIN
+        # Usage: _copy_release_dir DESTDIR IYOKAN_BIN IYOKAN_PACKET_BIN TANGOR_BIN TANGOR_PACKET_BIN STARPU_LIB_DIR
         _copy_release_dir() {
-            local destdir="$1" iyokan_bin="$2" iyokan_packet_bin="$3" tangor_bin="$4" tangor_packet_bin="$5"
+            local destdir="$1" iyokan_bin="$2" iyokan_packet_bin="$3" tangor_bin="$4" tangor_packet_bin="$5" starpu_lib_dir="$6"
             rm -rf "$destdir"
             mkdir "$destdir"
             cp -a build/bin build/share "$destdir"
+            mkdir "$destdir/lib"
+            for starpu_lib in "$starpu_lib_dir"/libstarpu-1.4.so*; do
+                [ -e "$starpu_lib" ] || continue
+                cp -a "$starpu_lib" "$destdir/lib/"
+            done
+            [ -e "$destdir/lib/libstarpu-1.4.so" ] || ( echo "Missing bundled StarPU runtime"; exit 1 )
             cp -a README.md demo.bash "$destdir"
             # Place the variant-specific iyokan binaries as the canonical names.
             cp -a "$iyokan_bin"          "$destdir/bin/iyokan"
@@ -96,6 +102,7 @@ case "$1" in
                 share/kvsp/cahp-rt/libc.a \
                 share/kvsp/pearl-core.json \
                 share/kvsp/ruby-core.json \
+                lib/libstarpu-1.4.so \
                 ; do
                 [ -f "$destdir/$file" ] || ( echo "Missing release artifact: $destdir/$file"; exit 1 )
             done
@@ -106,13 +113,15 @@ case "$1" in
             build/bin/iyokan \
             build/bin/iyokan-packet \
             build/bin/tangor-iyokan \
-            build/bin/tangor-iyokan-packet
+            build/bin/tangor-iyokan-packet \
+            build/Tangor-avx512/starpu-install/lib
         # AVX2 release
         _copy_release_dir "kvsp_v$2-avx2" \
             build/bin/iyokan-avx2 \
             build/bin/iyokan-packet-avx2 \
             build/bin/tangor-iyokan-avx2 \
-            build/bin/tangor-iyokan-packet-avx2
+            build/bin/tangor-iyokan-packet-avx2 \
+            build/Tangor-avx2/starpu-install/lib
         ;;
 
     pack )
