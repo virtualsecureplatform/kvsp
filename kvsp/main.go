@@ -18,7 +18,7 @@ import (
 )
 
 var flagVerbose bool
-var evaluatorBackend = "iyokan"
+var evaluatorBackend = "tangor"
 
 const defaultCPU = "ruby"
 const ramBaseAddr = 0x10000
@@ -125,7 +125,7 @@ func addCPUFlags(fs *flag.FlagSet) (*string, *string) {
 }
 
 func addBackendFlag(fs *flag.FlagSet) *string {
-	return fs.String("backend", "iyokan", "Evaluator backend: iyokan or tangor")
+	return fs.String("backend", "tangor", "Evaluator backend: tangor or iyokan")
 }
 
 func selectBackend(name string) error {

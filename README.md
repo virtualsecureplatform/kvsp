@@ -193,10 +193,11 @@ $ git submodule update --init --recursive
 
 Build KVSP:
 
-The bundled Iyokan backend defaults to Block Binary keys with Subset Keys.
+Iyokan, Tangor, and KVSP default to Block Binary keys with Subset Keys.
 After upgrading, regenerate `secret.key`, bootstrapping/evaluation keys,
 encrypted executables, and snapshots: artifacts created with the former
-defaults are not compatible.
+defaults are not compatible. CPU and CUDA builds use one split Fourier archive
+layout, so regenerated artifacts can be shared by both evaluator backends.
 
 ```
 $ make -j$(nproc) # It may take a while.
@@ -204,20 +205,23 @@ $ make -j$(nproc) # It may take a while.
 
 ### Tangor evaluator backend
 
-Tangor is bundled as a submodule and can be installed alongside Iyokan. Build
-it with CUDA support, then select it from the `kvsp` command:
+Tangor is bundled as a submodule, built alongside Iyokan, and is KVSP's default
+evaluator. Build it with CUDA support, then run KVSP normally:
 
 ```sh
 $ make ENABLE_CUDA=1 tangor
-$ build/bin/kvsp run --backend tangor --cpu alexandrite \
+$ build/bin/kvsp run --cpu alexandrite \
     -bkey bootstrapping.key -i fib.enc -o result.enc -c 30 -g 2
 ```
 
 `--backend tangor` is also accepted by `emu`, `enc`, `dec`, `genkey`,
-`genbkey`, `plainpacket`, and `resume`; Iyokan remains the default. `-g` uses
-Tangor's native cuFHEpp GPU evaluator. The AVX2-compatible build target is
-`make ENABLE_CUDA=1 tangor-avx2`; the command automatically selects its
-suffixed binaries when the AVX-512 build is absent.
+`genbkey`, `plainpacket`, and `resume`. Use `--backend iyokan` to explicitly
+select the legacy evaluator. With Tangor, `-g` adds cuFHEpp CUDA workers to the
+same per-gate StarPU graph used by TFHEpp CPU workers. ROM/RAM CMUX tasks stay
+on TFHEpp CPU workers by default for depth-8 RAM correctness; ordinary gates
+continue to use both resource types. The AVX2-compatible build target is `make
+ENABLE_CUDA=1 tangor-avx2`; the command automatically selects its suffixed
+binaries when the AVX-512 build is absent.
 
 Release archives include both backends, so no `IYOKAN_SOURCE` override or
 manual binary replacement is required.
@@ -228,11 +232,11 @@ Use option `ENABLE_CUDA` if you build KVSP with GPU support:
 $ make -j$(nproc) ENABLE_CUDA=1 CUDACXX="/usr/local/cuda/bin/nvcc" CUDAHOSTCXX="/usr/bin/clang-8"
 ```
 
-### Tangor backend
+### Tangor-compatible Iyokan paths
 
 KVSP's Iyokan build targets can also use Tangor's compatible `iyokan` and
-`iyokan-packet` targets. Keep Iyokan as the default and build Tangor in a
-separate output directory:
+`iyokan-packet` targets when an older script requires those binary names.
+Build them in a separate output directory:
 
 ```
 $ make -j$(nproc) BUILDDIR=build-tangor IYOKAN_SOURCE=../Tangor \

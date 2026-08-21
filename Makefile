@@ -13,8 +13,8 @@ TANGOR_SOURCE ?= Tangor
 TANGOR_SOURCE_ABS := $(abspath $(TANGOR_SOURCE))
 # Extra arguments passed to Iyokan's CMake configure step.
 IYOKAN_CMAKE_ARGS ?=
-# Extra arguments passed to Tangor's CMake configure step.  Tangor defaults to
-# its native cuFHEpp GPU evaluator when ENABLE_CUDA=1.
+# Extra arguments passed to Tangor's CMake configure step. With ENABLE_CUDA=1,
+# cuFHEpp CUDA workers join TFHEpp CPU workers in Tangor's StarPU gate graph.
 TANGOR_CMAKE_ARGS ?=
 
 .PHONY: all prepare kvsp iyokan iyokan-avx2 iyokan-avx512 tangor tangor-avx2 tangor-avx512 cahp-sim yosys cahp-ruby cahp-pearl alexandrite llvm-cahp cahp-rt alexandrite-rt clean
@@ -89,13 +89,15 @@ tangor-avx2: prepare
 	@echo "Building Tangor (AVX2, -march=x86-64-v3, USE_AVX512=OFF)..."
 	mkdir -p $(BUILDDIR)/Tangor-avx2
 	cd $(BUILDDIR)/Tangor-avx2 && \
-		if [ ! -f CMakeCache.txt ] || [ ! -f Makefile ]; then cmake \
+		cmake \
 			-DCMAKE_BUILD_TYPE="Release" \
 			-DIYOKAN_ENABLE_CUDA=$(ENABLE_CUDA) \
 			-DIYOKAN_MARCH=x86-64-v3 \
 			-DUSE_AVX512=OFF \
+			-DTANGOR_KVSP_STARPU_GATE_OFFLOAD=ON \
+			-DTANGOR_USE_BUNDLED_STARPU=ON \
 			$(TANGOR_CMAKE_ARGS) \
-			"$(TANGOR_SOURCE_ABS)"; fi && \
+			"$(TANGOR_SOURCE_ABS)" && \
 		$(MAKE) iyokan iyokan-packet
 	cp -a $(BUILDDIR)/Tangor-avx2/bin/iyokan $(BUILDDIR)/bin/tangor-iyokan-avx2
 	cp -a $(BUILDDIR)/Tangor-avx2/bin/iyokan-packet $(BUILDDIR)/bin/tangor-iyokan-packet-avx2
@@ -104,12 +106,14 @@ tangor-avx512: prepare
 	@echo "Building Tangor (AVX512, -march=native, USE_AVX512=ON)..."
 	mkdir -p $(BUILDDIR)/Tangor-avx512
 	cd $(BUILDDIR)/Tangor-avx512 && \
-		if [ ! -f CMakeCache.txt ] || [ ! -f Makefile ]; then cmake \
+		cmake \
 			-DCMAKE_BUILD_TYPE="Release" \
 			-DIYOKAN_ENABLE_CUDA=$(ENABLE_CUDA) \
 			-DUSE_AVX512=ON \
+			-DTANGOR_KVSP_STARPU_GATE_OFFLOAD=ON \
+			-DTANGOR_USE_BUNDLED_STARPU=ON \
 			$(TANGOR_CMAKE_ARGS) \
-			"$(TANGOR_SOURCE_ABS)"; fi && \
+			"$(TANGOR_SOURCE_ABS)" && \
 		$(MAKE) iyokan iyokan-packet
 	cp -a $(BUILDDIR)/Tangor-avx512/bin/iyokan $(BUILDDIR)/bin/tangor-iyokan
 	cp -a $(BUILDDIR)/Tangor-avx512/bin/iyokan-packet $(BUILDDIR)/bin/tangor-iyokan-packet
