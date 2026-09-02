@@ -178,6 +178,7 @@ llvm-cahp: prepare
 		if [ ! -f CMakeCache.txt ]; then cmake \
 			-DCMAKE_BUILD_TYPE="Release" \
 			-DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
+			-DLLVM_ENABLE_LIBXML2=OFF \
 			-DLLVM_ENABLE_PROJECTS="lld;clang" \
 			-DLLVM_TARGETS_TO_BUILD="RISCV" \
 			-DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD="CAHP" \
