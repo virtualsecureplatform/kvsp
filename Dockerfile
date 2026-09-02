@@ -1,6 +1,9 @@
 FROM nvidia/cuda:13.3.1-devel-ubuntu24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
+ENV CARGO_HOME=/usr/local/cargo
+ENV RUSTUP_HOME=/usr/local/rustup
+ENV PATH=/usr/local/cargo/bin:$PATH
 
 RUN apt-get update && apt-get install -y \
     build-essential git curl openjdk-17-jdk-headless \
@@ -16,10 +19,16 @@ RUN apt-get update && apt-get install -y golang-go && \
     chmod 0755 /usr/local/bin/sbt && \
     rm -rf /var/lib/apt/lists/*
 
+# Chrysoberyl is authored in Veryl and is translated to SystemVerilog before
+# Yosys synthesis.
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | \
+        sh -s -- -y --profile minimal --default-toolchain stable && \
+    cargo install veryl --version 0.21.0 --locked
+
 # The source tree is bind-mounted at /build and normally owned by the host
 # user. Trust the explicitly mounted repositories so Git-dependent Yosys and
 # Go builds retain revision metadata when the image runs as root.
-RUN for dir in /build /build/Alexandrite /build/Iyokan /build/Tangor \
+RUN for dir in /build /build/Alexandrite /build/Chrysoberyl /build/Iyokan /build/Tangor \
         /build/cahp-pearl /build/cahp-rt /build/cahp-ruby /build/cahp-sim \
         /build/llvm-cahp /build/yosys /build/yosys/abc \
         /build/yosys/libs/cxxopts; do \

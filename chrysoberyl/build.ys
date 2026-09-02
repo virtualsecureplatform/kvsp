@@ -1,0 +1,12 @@
+read_slang --top ChrysoberylKVSP ../../Chrysoberyl/target/chrysoberyl.sv ChrysoberylKVSP.sv
+hierarchy -check -top ChrysoberylKVSP
+proc; opt; fsm; opt; memory; opt
+async2sync; dffunmap; opt
+techmap; opt
+flatten
+abc -g gates,MUX
+dfflegalize -cell $_DFF_P_ 01
+opt_expr; opt_clean
+clean -purge
+write_json chrysoberyl-core.json
+stat

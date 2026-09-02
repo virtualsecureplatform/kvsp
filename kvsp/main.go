@@ -73,6 +73,18 @@ var cpuProfiles = map[string]cpuProfile{
 		RegCount:           32,
 		RegWidth:           32,
 	},
+	"chrysoberyl": {
+		Name:               "chrysoberyl",
+		RuntimeName:        "ALEXANDRITE_RT",
+		BlueprintName:      "IYOKAN-BLUEPRINT-CHRYSOBERYL",
+		ROMSize:            4 * 1024,
+		RAMSize:            1024,
+		PointerWidth:       4,
+		StackAlign:         4,
+		StackPointerOffset: 8,
+		RegCount:           32,
+		RegWidth:           32,
+	},
 }
 
 // Flag for a list of values
@@ -119,7 +131,7 @@ func resolveCPU(cpuName, cahpCPUName string) (cpuProfile, error) {
 }
 
 func addCPUFlags(fs *flag.FlagSet) (*string, *string) {
-	cpuName := fs.String("cpu", "", "CPU target: ruby, pearl, or alexandrite")
+	cpuName := fs.String("cpu", "", "CPU target: ruby, pearl, alexandrite, or chrysoberyl")
 	cahpCPUName := fs.String("cahp-cpu", "", "Compatibility alias for --cpu ruby|pearl")
 	return cpuName, cahpCPUName
 }
@@ -240,6 +252,8 @@ func getPathOf(name string) (string, error) {
 			path = "../share/kvsp/cahp-pearl.toml"
 		case "IYOKAN-BLUEPRINT-ALEXANDRITE":
 			path = "../share/kvsp/alexandrite.toml"
+		case "IYOKAN-BLUEPRINT-CHRYSOBERYL":
+			path = "../share/kvsp/chrysoberyl.toml"
 		case "IYOKAN-PACKET":
 			if evaluatorBackend == "tangor" {
 				path = "tangor-iyokan-packet"
@@ -631,10 +645,14 @@ func doCC() error {
 	case "ruby", "pearl":
 		args = []string{"-target", "cahp", "-mcpu=generic", "-Oz", "--sysroot", rtPath}
 		args = append(args, userArgs...)
-	case "alexandrite":
+	case "alexandrite", "chrysoberyl":
+		march := "rv32i"
+		if profile.Name == "chrysoberyl" {
+			march = "rv32ic_zba_zbb_zcb"
+		}
 		args = []string{
 			"-target", "riscv32-unknown-elf",
-			"-march=rv32i",
+			"-march=" + march,
 			"-mabi=ilp32",
 			"-Oz",
 			"-ffreestanding",
@@ -1040,6 +1058,7 @@ var kvspRevision = "unk"
 var iyokanRevision = "unk"
 var tangorRevision = "unk"
 var alexandriteRevision = "unk"
+var chrysoberylRevision = "unk"
 var alexandriteRtRevision = "unk"
 var cahpRubyRevision = "unk"
 var cahpPearlRevision = "unk"
@@ -1053,6 +1072,7 @@ func doVersion() error {
 	fmt.Printf("- Iyokan\t(rev %s)\n", iyokanRevision)
 	fmt.Printf("- Tangor\t(rev %s)\n", tangorRevision)
 	fmt.Printf("- Alexandrite\t(rev %s)\n", alexandriteRevision)
+	fmt.Printf("- Chrysoberyl\t(rev %s)\n", chrysoberylRevision)
 	fmt.Printf("- alexandrite-rt\t(rev %s)\n", alexandriteRtRevision)
 	fmt.Printf("- cahp-ruby\t(rev %s)\n", cahpRubyRevision)
 	fmt.Printf("- cahp-pearl\t(rev %s)\n", cahpPearlRevision)

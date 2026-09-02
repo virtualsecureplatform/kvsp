@@ -85,6 +85,7 @@ case "$1" in
             strip "$destdir"/bin/* || true
             find \
                 Alexandrite \
+				Chrysoberyl \
                 Iyokan \
                 Tangor \
                 alexandrite-rt \
@@ -111,6 +112,8 @@ case "$1" in
                 demo.bash \
                 share/kvsp/alexandrite.toml \
                 share/kvsp/alexandrite-core.json \
+				share/kvsp/chrysoberyl.toml \
+				share/kvsp/chrysoberyl-core.json \
                 share/kvsp/alexandrite-rt/alexandrite.lds \
                 share/kvsp/alexandrite-rt/crt0.o \
                 share/kvsp/alexandrite-rt/libc.a \

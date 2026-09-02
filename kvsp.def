@@ -9,6 +9,7 @@ From: nvidia/cuda:13.0.2-devel-ubuntu24.04
 %environment
     export DEBIAN_FRONTEND=noninteractive
     export PATH=/opt/kvsp/build/bin:$PATH
+    export PATH=/usr/local/cargo/bin:$PATH
     export CUDA_HOME=/usr/local/cuda
     export PATH=$CUDA_HOME/bin:$PATH
     export LD_LIBRARY_PATH=$CUDA_HOME/lib64:$LD_LIBRARY_PATH
@@ -47,6 +48,13 @@ From: nvidia/cuda:13.0.2-devel-ubuntu24.04
         gnupg \
         ca-certificates \
         apt-transport-https
+
+    # Install Rust and Veryl for the Chrysoberyl HDL build.
+    export CARGO_HOME=/usr/local/cargo
+    export RUSTUP_HOME=/usr/local/rustup
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | \
+        sh -s -- -y --profile minimal --default-toolchain stable
+    /usr/local/cargo/bin/cargo install veryl --version 0.21.0 --locked
 
     # Install Go (Ubuntu 24.04 has recent Go in repos)
     apt-get install -y golang-go

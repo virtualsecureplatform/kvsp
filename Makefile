@@ -17,9 +17,9 @@ IYOKAN_CMAKE_ARGS ?=
 # cuFHEpp CUDA workers join TFHEpp CPU workers in Tangor's StarPU gate graph.
 TANGOR_CMAKE_ARGS ?=
 
-.PHONY: all prepare kvsp iyokan iyokan-avx2 iyokan-avx512 tangor tangor-avx2 tangor-avx512 cahp-sim yosys cahp-ruby cahp-pearl alexandrite llvm-cahp cahp-rt alexandrite-rt clean
+.PHONY: all prepare kvsp iyokan iyokan-avx2 iyokan-avx512 tangor tangor-avx2 tangor-avx512 cahp-sim yosys cahp-ruby cahp-pearl alexandrite chrysoberyl llvm-cahp cahp-rt alexandrite-rt clean
 
-all: kvsp iyokan-avx2 iyokan-avx512 tangor-avx2 tangor-avx512 cahp-sim cahp-ruby cahp-pearl alexandrite cahp-rt alexandrite-rt
+all: kvsp iyokan-avx2 iyokan-avx512 tangor-avx2 tangor-avx512 cahp-sim cahp-ruby cahp-pearl alexandrite chrysoberyl cahp-rt alexandrite-rt
 	@echo "Build successfully completed!"
 
 prepare:
@@ -43,6 +43,7 @@ kvsp: prepare
 			-X main.iyokanRevision=$$(git -C "$(IYOKAN_SOURCE_ABS)" rev-parse --short HEAD || echo "unk") \
 			-X main.tangorRevision=$$(git -C "$(TANGOR_SOURCE_ABS)" rev-parse --short HEAD || echo "unk") \
 			-X main.alexandriteRevision=$$(git -C ../Alexandrite rev-parse --short HEAD || echo "unk") \
+			-X main.chrysoberylRevision=$$(git -C ../Chrysoberyl rev-parse --short HEAD || echo "unk") \
 			-X main.alexandriteRtRevision=$$(git rev-parse --short HEAD || echo "unk") \
 			-X main.cahpRubyRevision=$$(git -C ../cahp-ruby rev-parse --short HEAD || echo "unk") \
 			-X main.cahpPearlRevision=$$(git -C ../cahp-pearl rev-parse --short HEAD || echo "unk") \
@@ -130,8 +131,13 @@ cahp-sim: prepare
 
 yosys: prepare
 	@echo "Building Yosys..."
-	if [ ! -e "./$(BUILDDIR)/yosys" ]; then ln -s ${PWD}/yosys $(BUILDDIR)/yosys; fi
-	cd $(BUILDDIR)/yosys && $(MAKE)
+	mkdir -p $(BUILDDIR)/yosys
+	cd $(BUILDDIR)/yosys && \
+		if [ ! -f CMakeCache.txt ]; then cmake \
+			-DCMAKE_BUILD_TYPE="Release" \
+			-DYOSYS_ENABLE_SLANG=ON \
+			../../yosys; fi && \
+		$(MAKE) yosys yosys-abc
 
 cahp-ruby: yosys prepare
 	@echo "Building cahp-ruby..."
@@ -156,6 +162,14 @@ alexandrite: yosys prepare
 	cd $(BUILDDIR)/Alexandrite && \
 		../yosys/yosys build.ys
 	cp $(BUILDDIR)/Alexandrite/alexandrite-core.json $(BUILDDIR)/share/kvsp/alexandrite-core.json
+
+chrysoberyl: yosys prepare
+	@echo "Building Chrysoberyl..."
+	cd Chrysoberyl && veryl build
+	mkdir -p $(BUILDDIR)/Chrysoberyl
+	cp chrysoberyl/ChrysoberylKVSP.sv chrysoberyl/build.ys $(BUILDDIR)/Chrysoberyl/
+	cd $(BUILDDIR)/Chrysoberyl && ../yosys/yosys build.ys
+	cp $(BUILDDIR)/Chrysoberyl/chrysoberyl-core.json $(BUILDDIR)/share/kvsp/chrysoberyl-core.json
 
 llvm-cahp: prepare
 	@echo "Building llvm-cahp..."

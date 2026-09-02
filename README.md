@@ -203,6 +203,17 @@ layout, so regenerated artifacts can be shared by both evaluator backends.
 $ make -j$(nproc) # It may take a while.
 ```
 
+The default build includes both RISC-V cores: Alexandrite and its Veryl-based
+successor Chrysoberyl. Chrysoberyl requires the `veryl` command and is selected
+with `--cpu chrysoberyl`. Its KVSP configuration uses the same 4 KiB ROM,
+1 KiB RAM, linker script, and runtime ABI as Alexandrite, while enabling
+RV32IC_Zba_Zbb_Zcb instructions in the compiler:
+
+```sh
+$ build/bin/kvsp cc --cpu chrysoberyl fib.c -o fib
+$ build/bin/kvsp emu --cpu chrysoberyl fib 5
+```
+
 ### Tangor evaluator backend
 
 Tangor is bundled as a submodule, built alongside Iyokan, and is KVSP's default

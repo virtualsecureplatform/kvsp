@@ -2,8 +2,26 @@ package main
 
 import (
 	"flag"
+	"reflect"
 	"testing"
 )
+
+func TestChrysoberylProfileMatchesAlexandriteMemoryABI(t *testing.T) {
+	chrysoberyl, err := getCPUProfile("Chrysoberyl")
+	if err != nil {
+		t.Fatal(err)
+	}
+	alexandrite := cpuProfiles["alexandrite"]
+
+	got := []interface{}{chrysoberyl.ROMSize, chrysoberyl.RAMSize, chrysoberyl.PointerWidth, chrysoberyl.StackAlign, chrysoberyl.StackPointerOffset, chrysoberyl.RegCount, chrysoberyl.RegWidth, chrysoberyl.RuntimeName}
+	want := []interface{}{alexandrite.ROMSize, alexandrite.RAMSize, alexandrite.PointerWidth, alexandrite.StackAlign, alexandrite.StackPointerOffset, alexandrite.RegCount, alexandrite.RegWidth, alexandrite.RuntimeName}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("Chrysoberyl ABI = %#v, want Alexandrite ABI %#v", got, want)
+	}
+	if chrysoberyl.BlueprintName != "IYOKAN-BLUEPRINT-CHRYSOBERYL" {
+		t.Fatalf("Chrysoberyl blueprint = %q", chrysoberyl.BlueprintName)
+	}
+}
 
 func TestBackendFlagDefaultsToTangor(t *testing.T) {
 	fs := flag.NewFlagSet("backend-default", flag.ContinueOnError)

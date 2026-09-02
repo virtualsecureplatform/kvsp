@@ -26,3 +26,6 @@
 	path = Tangor
 	url = https://github.com/virtualsecureplatform/Tangor.git
 	branch = main
+[submodule "Chrysoberyl"]
+	path = Chrysoberyl
+	url = https://github.com/virtualsecureplatform/Chrysoberyl.git
