@@ -17,7 +17,7 @@ IYOKAN_CMAKE_ARGS ?=
 # cuFHEpp CUDA workers join TFHEpp CPU workers in Tangor's StarPU gate graph.
 TANGOR_CMAKE_ARGS ?=
 
-.PHONY: all prepare kvsp iyokan iyokan-avx2 iyokan-avx512 tangor tangor-avx2 tangor-avx512 cahp-sim yosys cahp-ruby cahp-pearl alexandrite chrysoberyl llvm-cahp cahp-rt alexandrite-rt clean
+.PHONY: all prepare kvsp iyokan iyokan-avx2 iyokan-avx512 tangor tangor-avx2 tangor-avx512 cahp-sim yosys cahp-ruby cahp-pearl alexandrite chrysoberyl llvm-cahp cahp-rt alexandrite-rt coremark-matrix coremark-matrix-run clean
 
 all: kvsp iyokan-avx2 iyokan-avx512 tangor-avx2 tangor-avx512 cahp-sim cahp-ruby cahp-pearl alexandrite chrysoberyl cahp-rt alexandrite-rt
 	@echo "Build successfully completed!"
@@ -142,7 +142,9 @@ yosys: prepare
 cahp-ruby: yosys prepare
 	@echo "Building cahp-ruby..."
 	cp -a cahp-ruby $(BUILDDIR)/
-	cd $(BUILDDIR)/cahp-ruby && sbt run
+	cd $(BUILDDIR)/cahp-ruby && sbt \
+		-Dcahp.romAddrWidth=10 \
+		-Dcahp.ramAddrWidth=9 run
 	cd $(BUILDDIR)/cahp-ruby && \
 		../yosys/yosys build.ys
 	cp $(BUILDDIR)/cahp-ruby/vsp-core-ruby.json $(BUILDDIR)/share/kvsp/ruby-core.json
@@ -150,7 +152,9 @@ cahp-ruby: yosys prepare
 cahp-pearl: yosys prepare
 	@echo "Building cahp-pearl..."
 	cp -a cahp-pearl $(BUILDDIR)/
-	cd $(BUILDDIR)/cahp-pearl && sbt run
+	cd $(BUILDDIR)/cahp-pearl && sbt \
+		-Dcahp.romAddrWidth=10 \
+		-Dcahp.ramAddrWidth=9 run
 	cd $(BUILDDIR)/cahp-pearl && \
 		../yosys/yosys build.ys
 	cp $(BUILDDIR)/cahp-pearl/vsp-core-pearl.json $(BUILDDIR)/share/kvsp/pearl-core.json
@@ -169,6 +173,12 @@ chrysoberyl: yosys prepare
 	mkdir -p $(BUILDDIR)/Chrysoberyl
 	cp chrysoberyl/ChrysoberylKVSP.sv chrysoberyl/build.ys $(BUILDDIR)/Chrysoberyl/
 	cd $(BUILDDIR)/Chrysoberyl && ../yosys/yosys build.ys
+	python3 $(IYOKAN_SOURCE_ABS)/tools/yosys-init-only-reset.py \
+		--resetful $(BUILDDIR)/Chrysoberyl/chrysoberyl-core-resetful.json \
+		--folded $(BUILDDIR)/Chrysoberyl/chrysoberyl-core-folded.json \
+		--output $(BUILDDIR)/Chrysoberyl/chrysoberyl-core.json
+	cd $(BUILDDIR)/Chrysoberyl && \
+		../yosys/yosys -Q -T -p 'read_json chrysoberyl-core.json; check -assert; stat; ltp -noff'
 	cp $(BUILDDIR)/Chrysoberyl/chrysoberyl-core.json $(BUILDDIR)/share/kvsp/chrysoberyl-core.json
 
 llvm-cahp: prepare
@@ -189,7 +199,8 @@ llvm-cahp: prepare
 cahp-rt: llvm-cahp prepare
 	@echo "Building cahp-rt..."
 	cp -a cahp-rt $(BUILDDIR)/
-	cd $(BUILDDIR)/cahp-rt && CC=../llvm-cahp/bin/clang $(MAKE)
+	cd $(BUILDDIR)/cahp-rt && \
+		CC=../llvm-cahp/bin/clang AR=../llvm-cahp/bin/llvm-ar $(MAKE)
 	mkdir -p $(BUILDDIR)/share/kvsp/cahp-rt
 	cd $(BUILDDIR)/cahp-rt && \
 		cp -a crt0.o libc.a cahp.lds ../share/kvsp/cahp-rt/
@@ -201,6 +212,16 @@ alexandrite-rt: llvm-cahp prepare
 	mkdir -p $(BUILDDIR)/share/kvsp/alexandrite-rt
 	cd $(BUILDDIR)/alexandrite-rt && \
 		cp -a crt0.o libc.a alexandrite.lds ../share/kvsp/alexandrite-rt/
+
+coremark-matrix: kvsp cahp-rt alexandrite-rt cahp-ruby cahp-pearl alexandrite chrysoberyl
+	$(MAKE) -C benchmarks/coremark-kvsp \
+		KVSP=$(abspath $(BUILDDIR)/bin/kvsp) \
+		OUT_DIR=$(abspath $(BUILDDIR)/coremark-kvsp)
+
+coremark-matrix-run: coremark-matrix iyokan
+	$(MAKE) -C benchmarks/coremark-kvsp run \
+		KVSP=$(abspath $(BUILDDIR)/bin/kvsp) \
+		OUT_DIR=$(abspath $(BUILDDIR)/coremark-kvsp)
 
 clean:
 	rm -rf $(BUILDDIR)

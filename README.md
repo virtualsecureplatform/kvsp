@@ -214,6 +214,33 @@ $ build/bin/kvsp cc --cpu chrysoberyl fib.c -o fib
 $ build/bin/kvsp emu --cpu chrysoberyl fib 5
 ```
 
+Ruby and Pearl also use 4 KiB ROM and 1 KiB RAM in the KVSP build. Their
+Chisel generators take the ROM word-address width and RAM word-address width
+from the `cahp.romAddrWidth` and `cahp.ramAddrWidth` JVM properties. KVSP sets
+these to 10 and 9 respectively; standalone CAHP builds may select other memory
+sizes by overriding those properties.
+
+The bundled CAHP compiler uses compact PC-relative calls for functions defined
+in the same translation unit and range-safe indirect calls for external
+symbols. The CAHP runtime also supplies the 32-bit multiplication helper, so
+larger programs can be split across normal C translation units.
+
+### Reproducible CoreMark kernel comparison
+
+The pinned EEMBC CoreMark submodule and KVSP port include an 8-by-8 matrix
+multiplication workload on which Chrysoberyl's instruction extensions reduce
+the execution cycle count. Build it and run the validating plain emulator with:
+
+```sh
+$ make coremark-matrix
+$ make coremark-matrix-run
+```
+
+See [`benchmarks/coremark-kvsp/README.md`](benchmarks/coremark-kvsp/README.md)
+for scope and reproducibility details. This is an isolated kernel comparison,
+not a reportable CoreMark score; the standard 2,000-byte CoreMark data set does
+not fit in the current 1 KiB RAM together with runtime state.
+
 ### Tangor evaluator backend
 
 Tangor is bundled as a submodule, built alongside Iyokan, and is KVSP's default

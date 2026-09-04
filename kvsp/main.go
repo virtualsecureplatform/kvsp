@@ -24,16 +24,17 @@ const defaultCPU = "ruby"
 const ramBaseAddr = 0x10000
 
 type cpuProfile struct {
-	Name               string
-	RuntimeName        string
-	BlueprintName      string
-	ROMSize            uint64
-	RAMSize            uint64
-	PointerWidth       int
-	StackAlign         int
-	StackPointerOffset uint64
-	RegCount           int
-	RegWidth           int
+	Name                    string
+	RuntimeName             string
+	BlueprintName           string
+	InitializationOnlyReset bool
+	ROMSize                 uint64
+	RAMSize                 uint64
+	PointerWidth            int
+	StackAlign              int
+	StackPointerOffset      uint64
+	RegCount                int
+	RegWidth                int
 }
 
 var cpuProfiles = map[string]cpuProfile{
@@ -41,11 +42,11 @@ var cpuProfiles = map[string]cpuProfile{
 		Name:               "ruby",
 		RuntimeName:        "CAHP_RT",
 		BlueprintName:      "IYOKAN-BLUEPRINT-RUBY",
-		ROMSize:            512,
-		RAMSize:            512,
+		ROMSize:            4 * 1024,
+		RAMSize:            1024,
 		PointerWidth:       2,
 		StackAlign:         2,
-		StackPointerOffset: 512 - 2,
+		StackPointerOffset: 1024 - 2,
 		RegCount:           16,
 		RegWidth:           16,
 	},
@@ -53,11 +54,11 @@ var cpuProfiles = map[string]cpuProfile{
 		Name:               "pearl",
 		RuntimeName:        "CAHP_RT",
 		BlueprintName:      "IYOKAN-BLUEPRINT-PEARL",
-		ROMSize:            512,
-		RAMSize:            512,
+		ROMSize:            4 * 1024,
+		RAMSize:            1024,
 		PointerWidth:       2,
 		StackAlign:         2,
-		StackPointerOffset: 512 - 2,
+		StackPointerOffset: 1024 - 2,
 		RegCount:           16,
 		RegWidth:           16,
 	},
@@ -74,17 +75,25 @@ var cpuProfiles = map[string]cpuProfile{
 		RegWidth:           32,
 	},
 	"chrysoberyl": {
-		Name:               "chrysoberyl",
-		RuntimeName:        "ALEXANDRITE_RT",
-		BlueprintName:      "IYOKAN-BLUEPRINT-CHRYSOBERYL",
-		ROMSize:            4 * 1024,
-		RAMSize:            1024,
-		PointerWidth:       4,
-		StackAlign:         4,
-		StackPointerOffset: 8,
-		RegCount:           32,
-		RegWidth:           32,
+		Name:                    "chrysoberyl",
+		RuntimeName:             "ALEXANDRITE_RT",
+		BlueprintName:           "IYOKAN-BLUEPRINT-CHRYSOBERYL",
+		InitializationOnlyReset: true,
+		ROMSize:                 4 * 1024,
+		RAMSize:                 1024,
+		PointerWidth:            4,
+		StackAlign:              4,
+		StackPointerOffset:      8,
+		RegCount:                32,
+		RegWidth:                32,
 	},
+}
+
+func addResetMode(args []string, profile cpuProfile) []string {
+	if profile.InitializationOnlyReset {
+		return append(args, "--skip-reset")
+	}
+	return args
 }
 
 // Flag for a list of values
@@ -739,7 +748,9 @@ func doEmu() error {
 	if err != nil {
 		return err
 	}
-	err = runIyokan([]string{"plain", "-i", packedFile.Name(), "-o", resTmpFile.Name(), "--blueprint", blueprint}, iyokanArgs)
+	args := []string{"plain", "-i", packedFile.Name(), "-o", resTmpFile.Name(), "--blueprint", blueprint}
+	args = addResetMode(args, profile)
+	err = runIyokan(args, iyokanArgs)
 	if err != nil {
 		return err
 	}
@@ -980,6 +991,7 @@ func doRun() error {
 		"-i", *inputFileName,
 		"--blueprint", blueprint,
 	}
+	args = addResetMode(args, profile)
 	if *numGPU > 0 {
 		args = append(args, "--enable-gpu", "--gpu_num", fmt.Sprint(*numGPU))
 	}

@@ -8,5 +8,20 @@ abc -g gates,MUX
 dfflegalize -cell $_DFF_P_ 01
 opt_expr; opt_clean
 clean -purge
-write_json chrysoberyl-core.json
+check -assert
+write_json chrysoberyl-core-resetful.json
+
+# Build an oracle showing which reset gates disappear at the inactive level.
+# The Iyokan postprocessor uses it to replace those gates with zero-cost
+# topology-preserving aliases in the final netlist.
+# check -assert above proves there were no pre-existing undriven nets;
+# setundef therefore resolves only aliases detached by overriding the port.
+connect -set reset 0
+setundef -undriven -zero
+opt_expr; opt_clean
+delete w:reset
+add -input reset 1
+clean -purge
+check -assert
+write_json chrysoberyl-core-folded.json
 stat

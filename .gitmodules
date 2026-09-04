@@ -29,3 +29,6 @@
 [submodule "Chrysoberyl"]
 	path = Chrysoberyl
 	url = https://github.com/virtualsecureplatform/Chrysoberyl.git
+[submodule "benchmarks/coremark"]
+	path = benchmarks/coremark
+	url = https://github.com/eembc/coremark.git
